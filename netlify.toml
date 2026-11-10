@@ -1,0 +1,3 @@
+# Netlify: serve the app's files as-is. No build step needed.
+[build]
+  publish = "."

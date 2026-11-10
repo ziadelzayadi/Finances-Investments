@@ -1,0 +1,1686 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f54"><meta name="mobile-web-app-capable" content="yes"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ziad's Money</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky bar with shared currency + rate and four tabs; each tab is one column of cards, phone first. */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --surface-2:#f7f8f6; --line:#e4e6e2;
+  --ink:#16181c; --ink-2:#565a63; --ink-3:#8a8f99;
+  --accent:#1f6f54; --accent-soft:#e3efe9;
+  --pos:#0e7a52; --neg:#c23b3b; --warn:#b8860b;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --shadow:0 1px 2px rgba(20,24,28,.05),0 6px 20px rgba(20,24,28,.05);
+  --ff-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --ff-body:"Instrument Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --on-accent:#ffffff;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101214; --surface:#1a1d20; --surface-2:#212529; --line:#2c3136;
+  --ink:#eceef0; --ink-2:#aab0b8; --ink-3:#777e87;
+  --accent:#53c399; --accent-soft:#17382c;
+  --pos:#45c08a; --neg:#f0736f; --warn:#e0a92e;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#2a9d2a; --s7:#9085e9; --s8:#e66767;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  --on-accent:#0d1f18; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#101214; --surface:#1a1d20; --surface-2:#212529; --line:#2c3136;
+  --ink:#eceef0; --ink-2:#aab0b8; --ink-3:#777e87;
+  --accent:#53c399; --accent-soft:#17382c;
+  --pos:#45c08a; --neg:#f0736f; --warn:#e0a92e;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#2a9d2a; --s7:#9085e9; --s8:#e66767;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  --on-accent:#0d1f18; color-scheme:dark;
+}
+/* aliases used by the investing and plan tabs */
+:root{--panel:var(--surface);--ink2:var(--ink-2);--muted:var(--ink-3);--good:var(--pos);--bad:var(--neg);--chip:var(--surface-2)}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--ff-body);line-height:1.5;font-size:14.5px;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--ff-display);text-wrap:balance;margin:0;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+h2{font-size:18px} h3{font-size:15px}
+p{margin:0;max-width:68ch}
+.tnum,.num{font-variant-numeric:tabular-nums}
+.num{white-space:nowrap}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ink2{color:var(--ink-2)} .muted{color:var(--ink-3);font-size:12.5px} .subtle{color:var(--ink-3);font-size:12px}
+
+/* top bar + tabs */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.toprow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding-block:10px 8px}
+.brand{display:flex;flex-direction:column;margin-right:auto;min-width:0}
+.brand h1{font-size:19px}
+.brand small{color:var(--ink-3);font-size:11.5px}
+.ctrl{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{font:inherit;font-weight:600;font-size:13.5px;flex:1 0 auto;border:0;background:none;color:var(--ink-3);padding:9px 12px 10px;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+input[type=number],input[type=text]{font:inherit;font-size:13px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:5px 8px;width:80px}
+input[type=text]{width:100%}
+#rate{width:72px;text-align:right}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:12.5px;border:0;background:var(--surface-2);color:var(--ink-2);padding:5px 11px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
+.btn{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);border-radius:8px;padding:5px 11px;cursor:pointer}
+.btn:hover{border-color:var(--ink-3)}
+.btn-primary{font:inherit;font-weight:600;font-size:14px;border:0;background:var(--accent);color:var(--on-accent);padding:10px 16px;border-radius:10px;cursor:pointer}
+.btn-primary:disabled{opacity:.6;cursor:default}
+
+main{padding-block:16px 8px}
+.tab{display:flex;flex-direction:column;gap:16px}
+.tab[hidden],[hidden]{display:none!important}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);min-width:0}
+.stack{display:flex;flex-direction:column;gap:12px}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);min-width:0}
+.kpi .lab{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.kpi .val{font-family:var(--ff-display);font-size:24px;font-weight:600;margin-top:5px;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:12px;color:var(--ink-2);margin-top:3px}
+.val.pos{color:var(--pos)} .val.neg{color:var(--neg)}
+
+/* overview */
+.ov{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ovcard{display:flex;flex-direction:column;gap:12px}
+.ovhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ovrows{display:flex;flex-direction:column}
+.ovrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.ovrow:last-child{border-bottom:0}
+.ovrow span:first-child{color:var(--ink-2)}
+.ovrow b{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.ovrow b.pos{color:var(--pos)} .ovrow b.neg{color:var(--neg)}
+.go{align-self:flex-start;margin-top:auto}
+.progress{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.progress span{display:block;height:100%;background:var(--accent);border-radius:4px}
+
+/* money sections */
+.shead{display:flex;align-items:baseline;gap:10px 14px;flex-wrap:wrap;margin-bottom:4px}
+.shead .n{font-family:var(--ff-display);font-size:12px;font-weight:700;color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;flex:none}
+.shead h2{font-size:17px}
+.shead p{color:var(--ink-2);font-size:13px;flex-basis:100%}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 2px;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i:not(.dot){display:inline-block;width:14px;height:3px;border-radius:2px}
+.dot{width:10px;height:10px;border-radius:3px;flex:none;display:inline-block}
+.chartbox{position:relative;overflow-x:auto;margin-top:8px}
+svg{display:block;max-width:100%}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;line-height:1.45;padding:7px 9px;border-radius:8px;opacity:0;transition:opacity .1s;z-index:5;min-width:120px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.tip b{color:var(--surface)}
+.tip .row{display:flex;justify-content:space-between;gap:12px}
+.tip .row i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:5px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.tbl th,.tbl td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .tot td{font-weight:700;border-top:2px solid var(--line)}
+.tbl input{width:94px}
+.tbl .namecell input{width:100%;min-width:90px}
+.tdel{color:var(--ink-3);border:0;background:none;cursor:pointer;font-size:15px;padding:0 4px;line-height:1}
+.tdel:hover{color:var(--neg)}
+.scroller{overflow-x:auto}
+.abar{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:10px;margin:5px 0;font-size:13px}
+.abar .track{background:var(--surface-2);border-radius:6px;height:16px;overflow:hidden}
+.abar .fill{height:100%;border-radius:6px}
+.abar .amt{color:var(--ink-2);min-width:96px;text-align:right}
+.fx{margin:4px 0 14px;display:flex;flex-direction:column;gap:8px}
+.fxbar{display:flex;height:22px;border-radius:7px;overflow:hidden;background:var(--surface-2)}
+.fxbar span{display:block;height:100%}
+.fxbar .hard{background:var(--s1)} .fxbar .soft{background:var(--s4)}
+.fxlab{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--ink-2)}
+.fxlab i.hard{background:var(--s1)} .fxlab i.soft{background:var(--s4)}
+.tbl tr.cathead td{font-weight:700;background:var(--surface-2);border-top:2px solid var(--line)}
+.tbl td.sub{padding-left:18px}
+.ccy{font-size:10.5px;font-weight:700;color:var(--ink-3);border:1px solid var(--line);border-radius:5px;padding:0 4px;margin-left:5px;vertical-align:middle}
+.rateref{color:var(--ink-3);font-size:12px}
+.plan{margin:12px 0}
+.plan .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13.5px}
+.plan .meta{color:var(--ink-3);font-size:12px}
+.ptrack{background:var(--surface-2);border-radius:8px;height:20px;overflow:hidden;margin-top:5px}
+.pfill{height:100%;background:linear-gradient(90deg,var(--accent),var(--s3));border-radius:8px;min-width:2px;transition:width .25s}
+.scrub{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 14px;font-size:13px;color:var(--ink-2)}
+.scrub input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+.scrub .mo{font-family:var(--ff-display);font-weight:600;color:var(--ink);font-size:15px;min-width:118px}
+.addrow{margin-top:8px}
+.note{background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:9px 12px;font-size:12.5px;color:var(--ink-2);margin-top:10px}
+.segrow{margin:10px 0 2px}
+.subh{font-family:var(--ff-display);font-size:14px;margin:16px 0 2px;color:var(--ink-2)}
+.projscroll{max-height:290px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+.projscroll table{margin-top:0}
+.projscroll thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+.projscroll td{padding:5px 8px}
+.tbl tr.proj td{color:var(--ink-3)}
+.tbl tr.proj td.namecell{font-style:italic}
+body.mode-view .addrow,body.mode-view #reset,body.mode-view #howto,body.mode-view .tdel,body.mode-view #saveBtn{display:none}
+.btn.save{border-color:var(--accent);color:var(--accent);font-weight:600}
+.btn.save.dirty{background:var(--accent);color:var(--on-accent)}
+.btn.save.err{border-color:var(--neg);color:var(--neg);background:transparent}
+
+/* investing + plan */
+.eyebrow{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{border-top:2px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--ff-display);font-size:21px;font-variant-numeric:tabular-nums}
+.stat.neg b{color:var(--neg)} .stat.pos b{color:var(--pos)}
+.chart{position:relative}
+.chart svg{width:100%;height:auto;overflow:visible}
+.chart text{fill:var(--ink-3);font-size:11px;font-family:var(--ff-body)}
+.ptip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-110%)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+.tablewrap table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tablewrap th,.tablewrap td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+.tablewrap th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.tablewrap tr:last-child td{border-bottom:0}
+.tablewrap td.r,.tablewrap th.r{text-align:right}
+.tablewrap tr.total td{font-weight:600;background:var(--surface-2)}
+td.pj{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+td.pj small{display:block;color:var(--ink-3);font-size:11px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.pill.good{color:var(--pos)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--neg)}
+.tiers{display:flex;height:32px;border-radius:8px;overflow:hidden;gap:2px}
+.tiers div{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12.5px;min-width:0;white-space:nowrap;overflow:hidden}
+.tk2{font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.in{font:inherit;font-variant-numeric:tabular-nums;width:84px;text-align:right;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent)}
+.refresh{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.refresh p{flex:1 1 220px;min-width:0}
+.dnote{border:1px dashed var(--line);border-radius:12px;padding:14px;font-size:13px;color:var(--ink-2);display:flex;flex-direction:column;gap:8px}
+.answer ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.phase{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.phase.now{border-color:var(--accent);background:var(--accent-soft)}
+.phase .when{font-size:12.5px;color:var(--accent);font-weight:600}
+.phase ul,.rules{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--ink-2)}
+.mix{display:flex;flex-direction:column;gap:8px}
+.mixrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.mbar{grid-column:1/-1;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.mbar span{display:block;height:100%;background:var(--s1);border-radius:4px}
+.hold{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.hold div{border-left:3px solid var(--line);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:2px}
+details summary{cursor:pointer;font-family:var(--ff-display);font-weight:600;font-size:15px}
+details[open] summary{margin-bottom:10px}
+a{color:var(--accent)}
+.foot{color:var(--ink-3);font-size:11.5px;text-align:center;margin:8px 0 26px;line-height:1.6}
+.lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lockbox{width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px;text-align:center}
+.lockbox h1{font-size:24px}
+#lock-entry{display:flex;flex-direction:column;gap:10px}
+#lock-entry[hidden]{display:none!important}
+input.pin{font:inherit;font-size:24px;letter-spacing:.4em;text-align:center;width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+.pinset{max-width:420px;margin:0 auto 20px;text-align:left}
+.pinset .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pinset input{font:inherit;width:120px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink)}
+
+@media (max-width:820px){.ov{grid-template-columns:1fr}}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi .val{font-size:21px}}
+@media (max-width:440px){.abar{grid-template-columns:96px 1fr;gap:8px}.abar .amt{grid-column:1/-1;text-align:left;min-width:0}.card{padding:15px}}
+@media (prefers-reduced-motion:reduce){.pfill,.tip{transition:none}}
+</style>
+
+<div id="lock" class="lock" role="dialog" aria-modal="true" aria-labelledby="lock-h">
+  <form class="lockbox" id="lock-form" autocomplete="off">
+    <h1 id="lock-h">Ziad's Money</h1>
+    <p class="ink2" id="lock-msg">Opening…</p>
+    <div id="lock-entry" hidden>
+      <label for="lock-pin" class="muted">Enter your PIN</label>
+      <input id="lock-pin" class="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+      <button class="btn-primary" type="submit" style="width:100%">Unlock</button>
+      <p class="muted" id="lock-err" aria-live="polite"></p>
+    </div>
+  </form>
+</div>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="toprow">
+      <div class="brand"><h1>Ziad's Money</h1><small id="asof">loading your numbers…</small></div>
+      <div class="ctrl"><label for="rate">$1 =</label><input type="text" id="rate" inputmode="decimal" autocomplete="off"> <span>EGP</span></div>
+      <div class="ctrl seg" role="group" aria-label="Currency">
+        <button id="cEGP" aria-pressed="true">EGP</button><button id="cUSD" aria-pressed="false">USD</button>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="t-overview" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" id="t-money" data-tab="money" aria-selected="false">Money</button>
+      <button role="tab" id="t-invest" data-tab="invest" aria-selected="false">Investing</button>
+      <button role="tab" id="t-plan" data-tab="plan" aria-selected="false">Plan</button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+
+<!-- ================= OVERVIEW ================= -->
+<div class="tab" id="tab-overview" role="tabpanel" aria-labelledby="t-overview">
+  <div class="kpis" id="ov-kpis"></div>
+  <div class="ov">
+    <div class="card ovcard">
+      <div class="ovhead"><h2>Money</h2><span class="subtle" id="ov-m-when"></span></div>
+      <div class="ovrows" id="ov-money"></div>
+      <button class="btn go" data-goto="money">Open money →</button>
+    </div>
+    <div class="card ovcard">
+      <div class="ovhead"><h2>Investing</h2><span class="subtle" id="ov-i-when"></span></div>
+      <div class="ovrows" id="ov-inv"></div>
+      <div class="progress" aria-hidden="true"><span id="ov-i-prog" style="width:0%"></span></div>
+      <button class="btn go" data-goto="invest">Open investing →</button>
+    </div>
+    <div class="card ovcard">
+      <div class="ovhead"><h2>Plan</h2><span class="subtle">from 21 Oct 2026</span></div>
+      <div class="ovrows" id="ov-plan"></div>
+      <button class="btn go" data-goto="plan">Open plan →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MONEY (dashboard) ================= -->
+<div class="tab" id="tab-money" role="tabpanel" aria-labelledby="t-money" hidden>
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="View mode">
+      <button id="mView" aria-pressed="true">View</button><button id="mEdit" aria-pressed="false">Edit</button>
+    </div>
+    <button class="btn save" id="saveBtn">Save</button>
+    <button class="btn" id="reset">Reset to my sheet</button>
+    <span class="subtle" id="m-status"></span>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="note" id="howto" style="margin-top:0">Type into any box to change a number and use the <b>+</b> buttons to add rows. It saves automatically.</div>
+
+  <section class="card" id="sec1">
+    <div class="shead"><div class="n">1</div><h2>Each month: money in and money out</h2>
+      <p>Your income (salary + freelance) for each month, then what goes out split across your cards, accounts, the loan and daily spending. <b>Net</b> is what's left over.</p></div>
+    <div class="legend" id="leg1"></div>
+    <div class="chartbox"><svg id="chart1" role="img" aria-label="Monthly payments by account"></svg><div class="tip" id="tip1"></div></div>
+    <div class="scroller"><table class="tbl" id="tbl1"></table></div>
+    <button class="btn addrow" id="addMonth">+ Add next month</button>
+  </section>
+
+  <section class="card" id="sec2">
+    <div class="shead"><div class="n">2</div><h2>Where your assets are</h2>
+      <p>Your holdings and what each is worth. Currency holds your dollars, pounds and EGP cash. Edit any line in Edit mode; totals follow.</p></div>
+    <div id="fx-exposure" class="fx"></div>
+    <div id="assetBars"></div>
+    <div class="scroller"><table class="tbl" id="tbl2"></table></div>
+    <button class="btn addrow" id="addAsset">+ Add holding</button>
+  </section>
+
+  <section class="card" id="sec3">
+    <div class="shead"><div class="n">3</div><h2>What you own vs what you owe, projected</h2>
+      <p>Month by month, including salary and daily spending, projected forward from your entered months. The lines cross the month you break even.</p></div>
+    <div class="legend" id="leg3"></div>
+    <div class="seg segrow" id="horizon" role="group" aria-label="How far to project"></div>
+    <div class="chartbox"><svg id="chart3" role="img" aria-label="Net worth projected over time"></svg><div class="tip" id="tip3"></div></div>
+    <div class="note" id="liabNote"></div>
+    <table class="tbl" id="tbl3" style="max-width:420px"></table>
+    <h3 class="subh">Net worth, month by month</h3>
+    <div class="scroller projscroll"><table class="tbl" id="tblProj"></table></div>
+  </section>
+
+  <section class="card" id="sec4">
+    <div class="shead"><div class="n">4</div><h2>Your purchase plans</h2>
+      <p>Each plan gets its share of what's left over once you break even. Nothing is saved before then. Drag the slider to see them fill.</p></div>
+    <div class="scrub">
+      <span>See savings as of</span><span class="mo" id="scrubMo"></span>
+      <input type="range" id="scrub" min="0" step="1" aria-label="Month to show">
+      <span class="subtle" id="scrubHint"></span>
+    </div>
+    <div id="plans"></div>
+    <div class="scroller"><table class="tbl" id="tbl4"></table></div>
+    <button class="btn addrow" id="addPlan">+ Add plan</button>
+  </section>
+</div>
+
+<!-- ================= INVESTING (tracker) ================= -->
+<div class="tab" id="tab-invest" role="tabpanel" aria-labelledby="t-invest" hidden>
+  <div id="i-offline" class="dnote" hidden>Saved data could not load in this view. Open the page signed in to claude.ai to see your monthly lists and save what you buy.</div>
+
+  <section class="card stack">
+    <h2>Everything you own</h2>
+    <p class="ink2">Your current assets from the Money tab plus the new monthly investments you tick below. To change a current holding, edit it in <a href="#money" data-goto="money">Money</a>, section 2.</p>
+    <div class="stats" id="all-stats"></div>
+    <div id="all-bars"></div>
+    <div class="scroller"><table class="tbl" id="all-table"></table></div>
+  </section>
+
+  <section class="card stack">
+    <span class="eyebrow">New monthly investments · from November 2026</span>
+    <div class="stats" id="i-hero"></div>
+    <p class="muted" id="i-hero-note"></p>
+  </section>
+
+  <section class="card stack">
+    <h2>Month by month at 10% a year</h2>
+    <p class="ink2">What you invest each month (that month's profit from the Money tab) and what your assets could be worth if everything you hold grows about 10% a year on average.</p>
+    <div class="stats" id="mm-stats"></div>
+    <div class="chart" id="mm-chart"></div>
+    <div class="scroller projscroll"><table class="tbl" id="mm-table"></table></div>
+    <p class="muted">"New investments" counts only the monthly profit you put in from November, with growth. "All your assets" starts from everything in Money today and also grows 10% a year. In months that lose money nothing is invested, and the shortfall comes out of your assets. 10% a year is an average, so real years will swing above and below it.</p>
+  </section>
+
+  <section class="card stack">
+    <h2>This month's buy list</h2>
+    <div class="refresh">
+      <p class="ink2"><b style="color:var(--ink)">Want fresh analysis now?</b> I'll check the markets again and update this month's list, the notes and the projections. It takes about 15 minutes, and I'll message you in the project when it's done.</p>
+      <button class="btn-primary" id="refresh-btn">Run new market analysis</button>
+      <span class="muted" id="refresh-status" style="flex-basis:100%"></span>
+    </div>
+    <div class="chips" id="month-chips"></div>
+    <div id="month-empty" class="dnote">Your first monthly list will appear here. Each month I check the markets and post the next list a few days before the month starts.</div>
+    <div id="month-box" class="stack" hidden>
+      <div class="stack" style="gap:6px">
+        <span class="eyebrow" id="m-updated"></span>
+        <p id="m-summary"></p>
+        <p class="ink2" id="m-changes"></p>
+      </div>
+      <div class="tiers" id="m-tiers"></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Buy</th><th>Where</th><th class="r">Amount ($)</th><th class="r">Bought</th></tr></thead>
+        <tbody id="m-picks"></tbody>
+      </table></div>
+      <p class="muted">Tick each one after you buy it. If you bought a different amount, change the number. Thndr amounts show in EGP at this month's rate.</p>
+    </div>
+  </section>
+
+  <section class="card stack">
+    <h2>Your holdings</h2>
+    <p class="ink2">Once a month, open Thndr and IBKR and type each holding's current value. Thndr values in EGP, IBKR values in USD.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Holding</th><th class="r">Put in</th><th class="r">Value now</th><th class="r">Return</th></tr></thead>
+      <tbody id="h-rows"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card stack">
+    <h2>Projections by investment</h2>
+    <p class="ink2">What each holding could be worth if you keep buying this month's amount. Big number is the normal case; the small line is bad to good.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Holding</th><th class="r">6 months</th><th class="r">1 year</th><th class="r">2 years</th><th class="r">3 years</th><th class="r">4 years</th><th class="r">5 years</th></tr></thead>
+      <tbody id="pj-rows"></tbody>
+    </table></div>
+    <p class="muted" id="pj-note"></p>
+  </section>
+
+  <section class="card stack">
+    <h2>Projection vs reality</h2>
+    <div class="chart" id="i-proj"></div>
+    <p class="muted">Lines show where the portfolio should be if you invest each month's profit from the Money tab: bad 3%, normal 8%, good 11% a year. Change a month in Money and this follows. Dots are your real totals, saved each month you update values.</p>
+  </section>
+
+  <section class="card stack">
+    <h2>What a bigger or smaller month does</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Invested each month</th><th class="r">After 5 years</th><th class="r">After 10 years</th><th class="r">After 20 years</th></tr></thead>
+      <tbody id="raise"></tbody>
+    </table></div>
+    <p class="muted">Normal case, 8% a year. Your profit changes month to month, so this shows the range. Every month you invest counts; a weak month is fine as long as you keep going.</p>
+  </section>
+
+  <section class="dnote">
+    <b style="color:var(--ink)">How the monthly list works</b>
+    <span>Each month the whole profit from the Money tab (income minus spending and installments) is invested: <b>50% IBKR stocks, 20% gold, 10% SAFE real estate, 20% kept as US dollars</b>. Inside the stock half, the S&amp;P 500 core stays about half and the single stocks shift by small steps based on that month's market research. A new list arrives on the 24th of each month.</span>
+  </section>
+</div>
+
+<!-- ================= PLAN (growth plan + $500 portfolio) ================= -->
+<div class="tab" id="tab-plan" role="tabpanel" aria-labelledby="t-plan" hidden>
+  <section class="card stack answer">
+    <span class="eyebrow">Growth plan · 21 Oct 2026</span>
+    <h2>The short answer</h2>
+    <ol>
+      <li><b>Your cash flow, not your returns, is the main limit right now.</b> The money left over after all payments is small: about <span class="num" data-v="5972"></span> a month from July 2027. It jumps to about <span class="num" data-v="32452"></span> a month once the loan is paid off in March 2028.</li>
+      <li><b>Put idle money to work today.</b> Move the <span class="num" data-v="90000"></span> Egyptian cash plus the November and December surplus into a money market fund (Thndr savings). It pays about 15 to 19% a year, you can withdraw any day, and it covers the January to April shortfall.</li>
+      <li><b>Fund one goal at a time instead of all at once.</b> Filling them in order brings the first ones years sooner: Egypt travel moves from <span id="a-egy-old"></span> to <span id="a-egy-new"></span>.</li>
+      <li><b>Invest each month's whole profit on the same day:</b> 50% IBKR stocks, 20% gold, 10% real estate, 20% US dollars, following the buy list in the Investing tab. Never sell in a drop, and pay for purchases from income, not from these assets.</li>
+    </ol>
+  </section>
+
+  <section class="card stack">
+    <h2>Money left each month after spending and all payments</h2>
+    <div class="chart" id="flow-chart"></div>
+    <p class="muted">Income 180k in Nov and Dec, then 90k. Spending 40k a month plus your cards, Nawy, the 12k cash column and the 26,480 loan payment. The four red months add up to about <span class="num" data-v="-71471"></span>.</p>
+  </section>
+
+  <section class="card stack">
+    <h2>The plan, step by step</h2>
+    <div class="phases">
+      <div class="phase" data-from="2026-10" data-to="2027-04">
+        <span class="when">Now to April 2027</span>
+        <h3>1. Build the cushion</h3>
+        <ul>
+          <li>Move the 90k Egyptian cash into Thndr savings (money market fund).</li>
+          <li>Add the Nov and Dec surplus (about <span class="num" data-v="124668"></span>) to it.</li>
+          <li>Pay the Jan to Apr shortfall from it. About <span class="num" data-v="150000"></span> stays as your emergency fund.</li>
+        </ul>
+      </div>
+      <div class="phase" data-from="2027-05" data-to="2028-03">
+        <span class="when">May 2027 to March 2028</span>
+        <h3>2. Keep the monthly habit</h3>
+        <ul>
+          <li>Keep investing every month and fill goals in order, starting with Egypt travel.</li>
+          <li>Aim higher by adding one extra freelance month a year plus 2,500 less daily spending.</li>
+        </ul>
+      </div>
+      <div class="phase" data-from="2028-04" data-to="2099-12">
+        <span class="when">April 2028 onward</span>
+        <h3>3. Loan gone, speed up</h3>
+        <ul>
+          <li>The 26,480 loan payment becomes yours: invest about <span class="num" data-v="32000"></span> a month.</li>
+          <li>From late 2031 Nawy is paid off too, adding 5,548 a month.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="card stack">
+    <h2>When each purchase plan is reached</h2>
+    <p class="ink2">Targets rise with prices (about 10% a year). All three columns use the same income and spending.</p>
+    <div class="tablewrap"><table id="plan-table">
+      <thead><tr><th>Plan</th><th class="r">Target today</th><th class="r">Today's way<br><span style="text-transform:none;font-weight:400">cash, % split</span></th><th class="r">The plan<br><span style="text-transform:none;font-weight:400">invested, in order</span></th><th class="r">Plan + boost<br><span style="text-transform:none;font-weight:400">+10k a month</span></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="muted">"In order" fills Egypt travel, Home furniture, New car, Travel abroad, Rolex, Salma's accessories, then the 2 year baby run (last only because it is the largest).</p>
+  </section>
+
+  <section class="card stack">
+    <h2>Net worth over the next 5 years</h2>
+    <div class="chart" id="nw-chart"></div>
+    <p class="muted">Counts money saved for goals as owned. "Today's way" keeps your current holdings and saves extra cash at home.</p>
+  </section>
+
+  <section class="card stack">
+    <h2 id="p5-title">How your monthly investing could grow</h2>
+    <div class="chart" id="p5-proj"></div>
+    <div class="stats" id="p5-stats"></div>
+    <p class="muted"><span id="p5-amt"></span>, in dollars, with no raises after your entered months. Normal 8% a year, bad 3%, good 11%. In a crash year the portfolio could be down 25 to 35% on paper; keep buying, because those months buy the most.</p>
+  </section>
+
+  <section class="card stack">
+    <details>
+      <summary>What to do with what you already hold</summary>
+      <div class="hold">
+        <div><b>Gold · <span class="num" data-v="208400"></span></b><span class="ink2">Keep it. It is already your biggest holding and near record highs, so add only through the monthly gold fund buy. Gold funds on Thndr avoid the jeweller's workmanship fee.</span></div>
+        <div><b>Certificate · <span class="num" data-v="170000"></span></b><span class="ink2">Keep it to maturity. When it matures, compare a new 3 year certificate with the money market fund.</span></div>
+        <div><b>Dollars and pounds sterling · <span class="num" data-v="120400"></span></b><span class="ink2">Keep about half as hard-currency safety. Move the rest to IBKR in one transfer and buy the S&amp;P 500 fund.</span></div>
+        <div><b>IBKR stocks · <span class="num" data-v="20000"></span></b><span class="ink2">Keep META, NVIDIA, Tesla and Apple. New money follows the monthly buy list.</span></div>
+        <div><b>Thndr stocks · <span class="num" data-v="45000"></span></b><span class="ink2">Keep. For new money the EGX30 index fund beats picking single stocks.</span></div>
+        <div><b>Crypto · <span class="num" data-v="40000"></span></b><span class="ink2">Keep, add nothing. If you trim, keep Bitcoin over Ethereum.</span></div>
+      </div>
+    </details>
+    <details>
+      <summary>How to run the $500 plan</summary>
+      <ol class="rules">
+        <li><b>Thndr every month:</b> set the Thndr buys for the same day each month, right after your salary arrives.</li>
+        <li><b>IBKR every 3 months:</b> send one bigger transfer, since bank transfers from Egypt carry a fixed fee. Buy the S&amp;P 500 fund right away and the stocks with fractional shares.</li>
+        <li><b>Once a year (every November), check the split.</b> Send the next months' money to the parts that are behind. You do not need to sell anything.</li>
+        <li><b>Raise the $500 when your income rises.</b></li>
+      </ol>
+    </details>
+    <details>
+      <summary>Every option, side by side</summary>
+      <p class="ink2" style="margin-bottom:10px">Yearly returns measured in Egyptian pounds. The last column shows what <span class="num" data-v="10000"></span> a month for 5 years becomes in a bad, normal and good case.</p>
+      <div class="tablewrap"><table id="opt-table">
+        <thead><tr><th>Option</th><th class="r">Yearly return<br>bad · normal · good</th><th>Risk</th><th>Withdraw</th><th class="r">10k a month, 5 years</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </details>
+    <details>
+      <summary>Pay the loan early?</summary>
+      <p class="ink2">Ask your bank for the loan's real yearly rate (APR, not the "flat" rate) and the early-payoff fee. If the APR is above about 20%, paying it down early beats every safe investment, because every pound you repay earns that rate with no risk. Card installments on ValU or Tru at 0% should not be paid early. Tell me the rate and I will redo the numbers.</p>
+    </details>
+    <details>
+      <summary>Numbers used and sources</summary>
+      <div class="stack ink2" style="font-size:13px">
+        <span>Dollar rate 53.9 EGP on 19 Oct 2026 (<a href="https://arabfinance.com/en/news/newdetails/usd-egp-exchange-rates-on-october-19" target="_blank" rel="noopener">Arab Finance</a>). The rate box at the top is shared by every tab.</span>
+        <span>Central Bank overnight deposit rate 19% (<a href="https://www.dailynewsegypt.com/2026/09/26/cbe-lowers-inflation-forecasts-keeps-key-rates-unchanged/" target="_blank" rel="noopener">Daily News Egypt</a>). Money market funds about 19 to 20% over the last year, 3 year certificates about 18% (<a href="https://enterpriseam.com/egypt/2026/09/08/is-your-money-market-fund-still-the-best-place-for-your-banknotes/" target="_blank" rel="noopener">EnterpriseAM</a>). Urban inflation 13.9% in September (<a href="https://www.dailynewsegypt.com/2026/10/10/egypts-annual-urban-inflation-eases-to-13-9-in-september/" target="_blank" rel="noopener">Daily News Egypt</a>).</span>
+        <span>Future returns are estimates, not promises. Income stays 90k and spending 40k from 2027 with no raises.</span>
+      </div>
+    </details>
+  </section>
+</div>
+
+<details class="card pinset" id="pinset">
+  <summary>PIN lock</summary>
+  <div class="stack" style="font-size:13px">
+    <p class="ink2" id="pin-state"></p>
+    <div class="row" id="pin-cur-row" hidden><label for="pin-cur">Current PIN</label><input id="pin-cur" type="password" inputmode="numeric" maxlength="8"></div>
+    <div class="row"><label for="pin-new">New PIN (4 to 8 digits)</label><input id="pin-new" type="password" inputmode="numeric" maxlength="8"></div>
+    <div class="row"><button class="btn-primary" id="pin-save" type="button">Save PIN</button><button class="btn" id="pin-remove" type="button" hidden>Remove PIN</button></div>
+    <p class="muted" id="pin-msg" aria-live="polite"></p>
+  </div>
+</details>
+
+<details class="card pinset" id="backupbox">
+  <summary>Back up and restore</summary>
+  <div class="stack" style="font-size:13px">
+    <p class="ink2">Everything is saved on this phone. A backup is one small file with all your numbers. Keep it in Google Drive or send it to yourself, so nothing is lost if the phone is.</p>
+    <p class="muted" id="bk-last"></p>
+    <div class="row"><button class="btn-primary" id="bk-save" type="button">Back up</button>
+      <label class="btn" for="bk-file" style="display:inline-flex;align-items:center">Restore from a file</label>
+      <input id="bk-file" type="file" accept=".json,application/json" hidden></div>
+    <p class="muted" id="bk-msg" aria-live="polite"></p>
+  </div>
+</details>
+
+<div class="foot">Your numbers are saved inside this app on your phone. Tap <b>Back up</b> now and then to keep a copy.<br><b>The Investing and Plan tabs are analysis to help you decide, not licensed financial advice.</b> Check fees, taxes and product terms with Thndr, IBKR and your bank before moving money.</div>
+</main>
+
+<script>
+"use strict";
+/* ---------- shared app shell: tabs, currency, rate ---------- */
+const App={mods:{},tab:"overview",
+  cur(){return App.mods.money?App.mods.money.S().cur:"EGP";},
+  rate(){return App.mods.money?(+App.mods.money.S().rate||50):50;},
+  renderAll(){ for(const k in App.mods){ try{App.mods[k].render();}catch(e){console.error(k,e);} } App.renderBar(); },
+  renderBar(){
+    document.getElementById("cEGP").setAttribute("aria-pressed",App.cur()==="EGP");
+    document.getElementById("cUSD").setAttribute("aria-pressed",App.cur()==="USD");
+    const r=document.getElementById("rate"); if(document.activeElement!==r) r.value=App.rate();
+  },
+  show(t){
+    if(!document.getElementById("tab-"+t)) t="overview";
+    App.tab=t;
+    document.querySelectorAll(".tab").forEach(p=>p.hidden=p.id!=="tab-"+t);
+    document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+    try{localStorage.setItem("zm_tab",t);}catch(e){}
+    App.renderAll();
+    window.scrollTo(0,0);
+  }
+};
+document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]"); if(b) App.show(b.dataset.tab);});
+document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]"); if(g) App.show(g.dataset.goto);});
+document.getElementById("cEGP").onclick=()=>App.mods.money.setCur("EGP");
+document.getElementById("cUSD").onclick=()=>App.mods.money.setCur("USD");
+document.getElementById("rate").addEventListener("input",e=>{const v=App.mods.money?App.mods.money.parseNum(e.target.value):parseFloat(e.target.value); if(v>1) App.mods.money.setRate(v);});
+
+/* ================= MONEY (dashboard) ================= */
+/* saving: local-first with timestamped cross-device sync */
+(function(){
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const SACC=[["Yasser","--s1"],["Ziad","--s2"],["Tru","--s3"],["Valu","--s4"],["Nawy Shares","--s5"],["Cash","--s6"],["Loan","--s7"]];
+const DAILY_COL="--s8";
+const cssv=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const $=id=>document.getElementById(id);
+
+function seed(){
+  const rows=[
+    ["November",2026, 26691,13953,0,700,5548,12000,26480, 180000,40000],
+    ["December",2026, 12591,12641,0,700,5548,12000,26480, 180000,40000],
+    ["January", 2027, 12591,11329,0,700,5548,12000,26480, 90000,40000],
+    ["February",2027, 12591,11329,0,700,5548,12000,26480, 90000,40000],
+    ["March",   2027, 12591,11329,5106,700,5548,12000,26480, 90000,40000],
+    ["April",   2027, 925,9662,5106,700,5548,12000,26480, 90000,40000],
+    ["May",     2027, 0,0,5106,700,5548,12000,26480, 90000,40000],
+    ["June",    2027, 0,0,5106,0,5548,12000,26480, 90000,40000],
+    ["July",    2027, 0,0,0,0,5548,12000,26480, 90000,40000],
+    ["August",  2027, 0,0,0,0,5548,12000,26480, 90000,40000],
+    ["September",2027,0,0,0,0,5548,12000,26480, 90000,40000],
+    ["October", 2027, 0,0,0,0,5548,12000,26480, 90000,40000],
+    ["November",2027, 0,0,0,0,5548,12000,26480, 90000,40000],
+    ["December",2027, 0,0,0,0,5548,12000,26480, 90000,40000],
+    ["January", 2028, 0,0,0,0,5548,12000,26480, 90000,40000]
+  ].map(r=>({month:r[0],year:r[1],split:r.slice(2,9),income:r[9],daily:r[10]}));
+  return {
+    rate:50, cur:"EGP", v:3, _scrub:0,
+    assets:[
+      {name:"US dollar",amount:2408,ccy:"USD",cat:"Currency"},
+      {name:"British pounds",amount:0,rate:65,ccy:"GBP",cat:"Currency"},
+      {name:"EGP cash",amount:90000,rate:1,ccy:"EGP",cat:"Currency"},
+      {name:"Gold",amount:1,rate:208400,ccy:"EGP"},
+      {name:"Certificate",amount:1,rate:170000,ccy:"EGP"},
+      {name:"Thndr",amount:1,rate:45000,ccy:"EGP"},
+      {name:"Thndr savings",amount:1,rate:0,ccy:"EGP"},
+      {name:"Bitcoin",amount:800,ccy:"USD"},
+      {name:"IBKR",amount:400,ccy:"USD"}
+    ],
+    liab:{Loan:450000,Installments:210000,"Nawy shares":338227},
+    months:rows,
+    plans:[
+      ["2 year baby run",30,2000000],["Egypt travel",5,50000],["Travel abroad",15,750000],
+      ["Investments",5,0],["Rolex watch",5,500000],["Salma accessories",5,500000],
+      ["Home furniture",10,150000],["New car",25,800000]
+    ].map(p=>({name:p[0],pct:p[1],target:p[2]}))
+  };
+}
+let S=load()||seed();
+migrate(S);
+function migrate(s){
+  if(!(s.v>=2)){
+    const low=a=>(a.name||"").toLowerCase();
+    const gold=["gold pounds","gold grams","gold"], cur=["british pound","us dollar","currency"];
+    const egpOf=names=>s.assets.filter(a=>names.includes(low(a))).reduce((t,a)=>t+(+a.amount||0)*(+a.rate||0),0);
+    if(s.assets.some(a=>gold.includes(low(a)))||s.assets.some(a=>cur.includes(low(a)))){
+      const gE=egpOf(gold), cE=egpOf(cur); const out=[]; let gd=false,cd=false;
+      s.assets.forEach(a=>{
+        if(gold.includes(low(a))){ if(!gd){out.push({name:"Gold",amount:1,rate:gE});gd=true;} }
+        else if(cur.includes(low(a))){ if(!cd){out.push({name:"Currency",amount:1,rate:cE});cd=true;} }
+        else out.push(a);
+      });
+      s.assets=out;
+    }
+    s._scrub=0; s.v=2;
+  }
+  // v3: a currency layer. Currency becomes a category (US dollar, British pounds, EGP cash),
+  // and dollar/IBKR/crypto holdings are stored in their own currency so a weaker pound reprices them.
+  if(!(s.v>=3)){
+    const rate=+s.rate||50, gbpRate=Math.round(rate*1.3);
+    const val=a=>(+a.amount||0)*(+a.rate||0);
+    const out=[]; let curEGP=0, usdQty=0, gbpQty=0, gbpRateSeen=gbpRate, haveSplit=false;
+    s.assets.forEach(a=>{
+      const nm=(a.name||"").toLowerCase();
+      if(nm==="us dollar"){ usdQty+=(+a.amount||0); haveSplit=true; return; }
+      if(nm==="british pounds"||nm==="british pound"){ gbpQty+=(+a.amount||0)||Math.round(val(a)/gbpRate); if(+a.rate>1)gbpRateSeen=+a.rate; haveSplit=true; return; }
+      if(nm==="currency"){ curEGP+=val(a); return; }
+      if(nm==="egyptian cash"||nm==="egp cash"){ out.push({name:"EGP cash",amount:Math.round(val(a)),rate:1,ccy:"EGP",cat:"Currency"}); return; }
+      if(nm==="bitcoin"||nm==="crypto"){ out.push({name:a.name,amount:+(val(a)/rate).toFixed(2),ccy:"USD"}); return; }
+      if(nm==="ibkr"){ out.push({name:"IBKR",amount:+(val(a)/rate).toFixed(2),ccy:"USD"}); return; }
+      out.push(Object.assign({},a,{ccy:a.ccy||"EGP"}));
+    });
+    const usd=haveSplit? usdQty : Math.round(curEGP/rate);
+    out.push({name:"US dollar",amount:usd,ccy:"USD",cat:"Currency"});
+    out.push({name:"British pounds",amount:gbpQty||0,rate:gbpRateSeen,ccy:"GBP",cat:"Currency"});
+    if(!out.some(a=>(a.name||"").toLowerCase()==="egp cash")) out.push({name:"EGP cash",amount:0,rate:1,ccy:"EGP",cat:"Currency"});
+    // cluster the Currency category together, in a sensible order
+    const order={"US dollar":0,"British pounds":1,"EGP cash":2};
+    const curItems=out.filter(a=>a.cat==="Currency").sort((a,b)=>(order[a.name]??9)-(order[b.name]??9));
+    s.assets=curItems.concat(out.filter(a=>a.cat!=="Currency"));
+    s.v=3;
+  }
+}
+// value of a holding in EGP. USD holdings follow the shared dollar rate at the top.
+function assetRate(a){ return a.ccy==="USD"?(+S.rate||1):(+a.rate||0); }
+function assetEGP(a){ return (+a.amount||0)*assetRate(a); }
+function isHard(a){ return a.ccy==="USD"||a.ccy==="GBP"; }
+function load(){try{const r=localStorage.getItem("ziad_dash_v1");return r?JSON.parse(r):null;}catch(e){return null;}}
+
+const fmt=n=>{n=Math.round(n);const neg=n<0;n=Math.abs(n);return (neg?"-":"")+n.toLocaleString("en-US");};
+function money(egp){ if(S.cur==="USD"){return "$"+fmt(egp/(S.rate||1));} return fmt(egp)+" EGP"; }
+function moneyShort(egp){ let v=S.cur==="USD"?egp/(S.rate||1):egp; const sym=S.cur==="USD"?"$":"";
+  const a=Math.abs(v); let s;
+  if(a>=1e6)s=(v/1e6).toFixed(a>=1e7?0:1)+"M"; else if(a>=1e3)s=(v/1e3).toFixed(0)+"k"; else s=Math.round(v)+"";
+  return sym+s; }
+
+let MODE=(function(){try{return localStorage.getItem("ziad_dash_mode")||"view";}catch(e){return "view";}})();
+function ed(){return MODE==="edit";}
+// LIVE = refresh charts/KPIs while typing but leave the input tables alone so the field keeps focus.
+let LIVE=false;
+const esc=v=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+// Parse a number the way a phone keyboard might give it: Arabic-Indic (٠١٢) or Persian (۰۱۲) digits,
+// Arabic decimal/thousands marks, commas and spaces all accepted.
+function parseNum(str){
+  if(str==null) return 0;
+  let s=String(str)
+    .replace(/[٠-٩]/g,d=>d.charCodeAt(0)-0x0660)
+    .replace(/[۰-۹]/g,d=>d.charCodeAt(0)-0x06F0)
+    .replace(/[٫]/g,'.').replace(/[٬,\s]/g,'')
+    .replace(/[^0-9.\-]/g,'');
+  const v=parseFloat(s); return isFinite(v)?v:0;
+}
+function nCell(val,attrs,fmtFn){return ed()?`<td><input type="text" inputmode="decimal" ${attrs} value="${val}"></td>`:`<td class="tnum">${(fmtFn||fmt)(val)}</td>`;}
+function tCell(val,attrs){return ed()?`<td class="namecell"><input type="text" ${attrs} value="${esc(val)}"></td>`:`<td class="namecell">${esc(val)}</td>`;}
+function delCell(attr){return ed()?`<td><button class="tdel" ${attr}>&times;</button></td>`:"";}
+const delHead=()=>ed()?"<th></th>":"";
+
+function compute(){
+  const assetsToday=S.assets.reduce((s,a)=>s+assetEGP(a),0);
+  const liabToday=Object.values(S.liab).reduce((s,v)=>s+(+v||0),0);
+  let assets=assetsToday, liab=liabToday;
+  const timeline=[{label:"Now",full:"Today",assets,liab,net:assets-liab,actual:true,idx:-1}];
+  S.months.forEach((m,i)=>{
+    const inst=m.split.reduce((s,v)=>s+(+v||0),0);
+    assets=assets+(+m.income||0)-inst-(+m.daily||0);
+    liab=Math.max(0,liab-inst);
+    timeline.push({label:m.month.slice(0,3)+" "+String(m.year).slice(2),full:m.month+" "+m.year,
+      assets,liab,net:assets-liab,actual:true,idx:i,inst,income:+m.income||0,daily:+m.daily||0,
+      key:m.year+"-"+String(MONTHS.indexOf(m.month)+1).padStart(2,"0"),profit:(+m.income||0)-inst-(+m.daily||0)});
+  });
+  const last=S.months[S.months.length-1]||{month:"October",year:2026,income:90000,daily:40000,split:[0,0,0,0,5548,12000,26480]};
+  const lastInst=last.split.reduce((s,v)=>s+(+v||0),0);
+  let y=last.year, mi=MONTHS.indexOf(last.month);
+  for(let k=0;k<120;k++){
+    mi++; if(mi>11){mi=0;y++;}
+    const inst=liab>0?Math.min(lastInst,liab):0;
+    assets=assets+(+last.income||0)-inst-(+last.daily||0);
+    liab=Math.max(0,liab-inst);
+    timeline.push({label:MONTHS[mi].slice(0,3)+" "+String(y).slice(2),full:MONTHS[mi]+" "+y,assets,liab,net:assets-liab,actual:false,
+      key:y+"-"+String(mi+1).padStart(2,"0"),profit:(+last.income||0)-inst-(+last.daily||0)});
+  }
+  const beIdx=timeline.findIndex((p,i)=>i>0&&p.net>=0);
+  return {assetsToday,liabToday,timeline,beIdx,projNet:timeline.map(p=>p.net),actualCount:S.months.length};
+}
+
+function renderKpis(C){
+  const be=C.beIdx>0?C.timeline[C.beIdx]:null;
+  const net=C.assetsToday-C.liabToday;
+  const months=C.beIdx>0?C.beIdx:null;
+  const k=[
+    {lab:"Net today",val:money(net),cls:net<0?"neg":"pos",sub:net<0?"you owe more than you own":"in the black"},
+    {lab:"What you own",val:money(C.assetsToday),sub:S.assets.length+" holdings"},
+    {lab:"What you owe",val:money(C.liabToday),sub:"loan, installments, Nawy"},
+    {lab:"Break even",val:be?be.full:"not yet",cls:be?"pos":"",sub:be?("in "+months+" month"+(months>1?"s":"")):"add more months"}
+  ];
+  $("kpis").innerHTML=k.map(x=>`<div class="kpi"><div class="lab">${x.lab}</div><div class="val ${x.cls||""}">${x.val}</div><div class="sub">${x.sub}</div></div>`).join("");
+}
+
+function renderSec1(){
+  $("leg1").innerHTML=SACC.map(a=>`<span><i class="dot" style="background:${cssv(a[1])}"></i>${a[0]}</span>`).join("")
+    +`<span><i class="dot" style="background:${cssv(DAILY_COL)}"></i>Daily spending</span>`;
+  const ms=S.months;
+  const totals=ms.map(m=>m.split.reduce((s,v)=>s+(+v||0),0)+(+m.daily||0));
+  const max=Math.max(1,...totals);
+  const n=ms.length, bw=Math.max(26,Math.min(52,(820-70)/n)), gap=bw*0.34;
+  const W=70+n*(bw+gap)+14, H=250, top=14, bot=48, plot=H-top-bot, x0=56;
+  const cols=SACC.map(a=>cssv(a[1])).concat([cssv(DAILY_COL)]);
+  let g=`<g font-family="var(--ff-body)">`;
+  for(let t=0;t<=4;t++){const gy=top+plot*(1-t/4),val=max*t/4;
+    g+=`<line x1="${x0}" y1="${gy.toFixed(1)}" x2="${W-8}" y2="${gy.toFixed(1)}" stroke="${cssv('--line')}" stroke-width="1"/>`;
+    g+=`<text x="${x0-6}" y="${(gy+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${cssv('--ink-3')}">${moneyShort(val)}</text>`;}
+  ms.forEach((m,i)=>{
+    const vals=m.split.map(v=>+v||0).concat([+m.daily||0]);
+    const bx=x0+8+i*(bw+gap); let acc=0;
+    vals.forEach((v,si)=>{
+      if(v<=0)return;
+      const h=plot*v/max, y=top+plot-acc-h;
+      g+=`<rect x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h-2).toFixed(1)}" rx="2.5" fill="${cols[si]}"/>`;
+      acc+=h;
+    });
+    g+=`<rect class="hit" data-i="${i}" x="${(bx-gap/2).toFixed(1)}" y="${top}" width="${(bw+gap).toFixed(1)}" height="${plot+bot}" fill="transparent"/>`;
+    g+=`<text x="${(bx+bw/2).toFixed(1)}" y="${H-bot+16}" text-anchor="middle" font-size="10" fill="${cssv('--ink-3')}">${m.month.slice(0,3)}</text>`;
+    g+=`<text x="${(bx+bw/2).toFixed(1)}" y="${H-bot+28}" text-anchor="middle" font-size="9" fill="${cssv('--ink-3')}">${String(m.year).slice(2)}</text>`;
+  });
+  g+=`</g>`;
+  const svg=$("chart1");
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("width",W); svg.setAttribute("height",H);
+  svg.innerHTML=g;
+  const tip=$("tip1");
+  svg.querySelectorAll(".hit").forEach(h=>{
+    const show=ev=>{
+      const m=ms[+h.dataset.i], vals=m.split.map(v=>+v||0).concat([+m.daily||0]);
+      const names=SACC.map(a=>a[0]).concat(["Daily spending"]);
+      const rows=names.map((nm,si)=>vals[si]>0?`<div class="row"><span><i style="background:${cols[si]}"></i>${nm}</span><b>${money(vals[si])}</b></div>`:"").join("");
+      tip.innerHTML=`<b>${m.month} ${m.year}</b>${rows}<div class="row" style="margin-top:4px;border-top:1px solid rgba(255,255,255,.2);padding-top:4px"><span>Total</span><b>${money(vals.reduce((s,v)=>s+v,0))}</b></div>`;
+      posTip(tip,svg,ev);
+    };
+    h.addEventListener("mousemove",show); h.addEventListener("click",show);
+    h.addEventListener("mouseleave",()=>tip.style.opacity=0);
+  });
+  const heads=["Month","Income"].concat(SACC.map(a=>a[0])).concat(["Daily","Spent","Net"]);
+  const th=`<thead><tr>${heads.map(h=>`<th>${h}</th>`).join("")}${delHead()}</tr></thead>`;
+  const tb="<tbody>"+ms.map((m,i)=>{
+    const cells=m.split.map((v,si)=>nCell(v,`data-m="${i}" data-s="${si}"`)).join("");
+    const out=m.split.reduce((s,v)=>s+(+v||0),0)+(+m.daily||0);
+    const net=(+m.income||0)-out;
+    return `<tr><td class="namecell">${m.month.slice(0,3)} ${String(m.year).slice(2)}</td>${nCell(m.income,`data-m="${i}" data-inc="1"`)}${cells}${nCell(m.daily,`data-m="${i}" data-d="1"`)}<td class="tnum">${fmt(out)}</td><td class="tnum" style="color:${net<0?cssv('--neg'):cssv('--pos')};font-weight:600">${fmt(net)}</td>${delCell(`data-delm="${i}" title="Remove month"`)}</tr>`;
+  }).join("")+"</tbody>";
+  if(!LIVE) $("tbl1").innerHTML=th+tb;
+}
+
+function renderFx(){
+  let hard=0, soft=0;
+  S.assets.forEach(a=>{ const v=assetEGP(a); if(isHard(a)) hard+=v; else soft+=v; });
+  const tot=hard+soft||1, hp=Math.round(hard/tot*100);
+  $("fx-exposure").innerHTML=
+    `<div class="fxbar"><span class="hard" style="width:${hp}%"></span><span class="soft" style="width:${100-hp}%"></span></div>
+     <div class="fxlab"><span><i class="dot hard"></i>Foreign currency ${hp}% · ${money(hard)}</span><span><i class="dot soft"></i>Egyptian pound ${100-hp}% · ${money(soft)}</span></div>
+     <p class="muted">Foreign = your dollars, pounds, IBKR and crypto. When the pound weakens, this part is worth more in EGP while your EGP assets and most of your spending stay the same. Update the dollar rate at the top and those holdings reprice here.</p>`;
+}
+// Build display groups: assets sharing a `cat` form one category; others stand alone.
+function assetGroups(){
+  const groups=[], map={};
+  S.assets.forEach((a,i)=>{
+    const key=a.cat||("__"+i);
+    if(!map[key]){ map[key]={name:a.cat||a.name, cat:a.cat||null, items:[]}; groups.push(map[key]); }
+    map[key].items.push({a,i});
+  });
+  return groups;
+}
+const gVal=g=>g.items.reduce((s,x)=>s+assetEGP(x.a),0);
+function assetRowHTML(a,i,sub){
+  const nameCell=ed()?`<td class="namecell ${sub?'sub':''}"><input type="text" data-a="${i}" data-f="name" value="${esc(a.name)}"></td>`
+    :`<td class="namecell ${sub?'sub':''}">${esc(a.name)}${a.ccy==="USD"?'<span class="ccy">$</span>':a.ccy==="GBP"?'<span class="ccy">£</span>':''}</td>`;
+  const amtCell=nCell(a.amount,`data-a="${i}" data-f="amount"`);
+  let rateCell;
+  if(a.ccy==="USD") rateCell=`<td class="rateref">× ${fmt(S.rate)} (top rate)</td>`;
+  else rateCell=nCell(a.rate,`data-a="${i}" data-f="rate"`);
+  return `<tr>${nameCell}${amtCell}${rateCell}<td class="tnum">${money(assetEGP(a))}</td>${delCell(`data-dela="${i}"`)}</tr>`;
+}
+function renderSec2(){
+  const groups=assetGroups();
+  const tot=S.assets.reduce((s,a)=>s+assetEGP(a),0)||1;
+  const sorted=[...groups].sort((x,y)=>gVal(y)-gVal(x));
+  const max=Math.max(...sorted.map(gVal),1);
+  const pal=[cssv('--s1'),cssv('--s3'),cssv('--s4'),cssv('--s7'),cssv('--s2'),cssv('--s5'),cssv('--s6'),cssv('--s8')];
+  $("assetBars").innerHTML=sorted.map((g,i)=>{const v=gVal(g);
+    return `<div class="abar"><span>${esc(g.name)}</span><div class="track"><div class="fill" style="width:${Math.max(2,v/max*100).toFixed(1)}%;background:${pal[i%pal.length]}"></div></div><span class="amt tnum">${money(v)} · ${(v/tot*100).toFixed(0)}%</span></div>`}).join("");
+  renderFx();
+  const th=`<thead><tr><th>Holding</th><th>Amount</th><th>Rate (EGP)</th><th>Value</th>${delHead()}</tr></thead>`;
+  let body="";
+  groups.forEach(g=>{
+    if(g.cat){
+      body+=`<tr class="cathead"><td class="namecell">${esc(g.cat)}</td><td></td><td></td><td class="tnum">${money(gVal(g))}</td>${ed()?"<td></td>":""}</tr>`;
+      g.items.forEach(({a,i})=>{ body+=assetRowHTML(a,i,true); });
+    } else {
+      g.items.forEach(({a,i})=>{ body+=assetRowHTML(a,i,false); });
+    }
+  });
+  body+=`<tr class="tot"><td>Net worth</td><td></td><td></td><td class="tnum">${money(tot)}</td>${ed()?"<td></td>":""}</tr>`;
+  if(!LIVE) $("tbl2").innerHTML=th+"<tbody>"+body+"</tbody>";
+}
+
+let HOR=(function(){try{return +localStorage.getItem("ziad_dash_hor")||36;}catch(e){return 36;}})();
+function renderSec3(C){
+  $("leg3").innerHTML=[["What you own",cssv('--s1')],["What you owe",cssv('--s8')],["Net worth",cssv('--accent')]]
+    .map(l=>`<span><i class="dot" style="background:${l[1]}"></i>${l[0]}</span>`).join("");
+  $("horizon").innerHTML=[[12,"1 yr"],[24,"2 yr"],[36,"3 yr"],[60,"5 yr"]].map(h=>`<button data-hor="${h[0]}" aria-pressed="${HOR===h[0]}">${h[1]}</button>`).join("");
+  const end=Math.min(HOR,C.timeline.length-1);
+  const pts=C.timeline.slice(0,end+1);
+  const aC=Math.min(C.actualCount,end);
+  const vals=pts.flatMap(p=>[p.assets,p.liab,p.net]);
+  const max=Math.max(...vals,0), min=Math.min(0,...vals);
+  const n=pts.length, step=Math.max(13,Math.min(44,760/Math.max(1,n-1)));
+  const L=56, W=Math.max(620,L+14+(n-1)*step), H=256, top=16, bot=46, plot=H-top-bot;
+  const X=i=>L+(n>1?(W-L-14)*i/(n-1):0);
+  const Y=v=>top+plot*(1-(v-min)/(max-min||1));
+  let g=`<g font-family="var(--ff-body)">`;
+  for(let t=0;t<=4;t++){const v=min+(max-min)*t/4,gy=Y(v);
+    g+=`<line x1="${L}" y1="${gy.toFixed(1)}" x2="${W-8}" y2="${gy.toFixed(1)}" stroke="${cssv('--line')}" stroke-width="1"/>`;
+    g+=`<text x="${L-6}" y="${(gy+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${cssv('--ink-3')}">${moneyShort(v)}</text>`;}
+  const zy=Y(0);
+  g+=`<line x1="${L}" y1="${zy.toFixed(1)}" x2="${W-8}" y2="${zy.toFixed(1)}" stroke="${cssv('--ink-3')}" stroke-width="1" stroke-dasharray="3 3"/>`;
+  if(aC<n-1){const px=X(aC);
+    g+=`<rect x="${px.toFixed(1)}" y="${top}" width="${(W-8-px).toFixed(1)}" height="${plot}" fill="${cssv('--ink-3')}" opacity="0.05"/>`;
+    g+=`<line x1="${px.toFixed(1)}" y1="${top}" x2="${px.toFixed(1)}" y2="${top+plot}" stroke="${cssv('--ink-3')}" stroke-width="1" stroke-dasharray="2 3" opacity=".5"/>`;
+    g+=`<text x="${(px+4).toFixed(1)}" y="${top+10}" font-size="9.5" fill="${cssv('--ink-3')}">projected →</text>`;}
+  if(C.beIdx>0&&C.beIdx<=end){const bx=X(C.beIdx);
+    g+=`<line x1="${bx.toFixed(1)}" y1="${top}" x2="${bx.toFixed(1)}" y2="${top+plot}" stroke="${cssv('--accent')}" stroke-width="1" stroke-dasharray="2 3" opacity=".65"/>`;
+    g+=`<text x="${bx.toFixed(1)}" y="${top-4}" text-anchor="middle" font-size="9.5" fill="${cssv('--accent')}" font-weight="600">break even</text>`;}
+  const seg=(key,col,from,to,dash)=>{let d="";for(let i=from;i<=to;i++)d+=(i===from?"M":"L")+X(i).toFixed(1)+" "+Y(pts[i][key]).toFixed(1)+" ";
+    return d?`<path d="${d.trim()}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"${dash?` stroke-dasharray="4 4" opacity=".92"`:""}/>`:"";};
+  [["assets",cssv('--s1')],["liab",cssv('--s8')],["net",cssv('--accent')]].forEach(s=>{ g+=seg(s[0],s[1],0,aC,false); g+=seg(s[0],s[1],aC,n-1,true); });
+  const lblEvery=Math.ceil(n/13);
+  pts.forEach((p,i)=>{ if(i%lblEvery!==0&&i!==n-1)return;
+    g+=`<text x="${X(i).toFixed(1)}" y="${H-bot+16}" text-anchor="middle" font-size="9.5" fill="${cssv('--ink-3')}">${p.label}</text>`;});
+  pts.forEach((p,i)=>{ g+=`<rect class="hit3" data-i="${i}" x="${(X(i)-step/2).toFixed(1)}" y="${top}" width="${step.toFixed(1)}" height="${plot}" fill="transparent"/>`; });
+  g+=`</g>`;
+  const svg=$("chart3");
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("width",W); svg.setAttribute("height",H);
+  svg.innerHTML=g;
+  const tip=$("tip3");
+  svg.querySelectorAll(".hit3").forEach(h=>{
+    const show=ev=>{const p=pts[+h.dataset.i];
+      tip.innerHTML=`<b>${p.full}${p.actual?"":" (projected)"}</b>
+        <div class="row"><span><i style="background:${cssv('--s1')}"></i>Own</span><b>${money(p.assets)}</b></div>
+        <div class="row"><span><i style="background:${cssv('--s8')}"></i>Owe</span><b>${money(p.liab)}</b></div>
+        <div class="row"><span><i style="background:${cssv('--accent')}"></i>Net worth</span><b>${money(p.net)}</b></div>`;
+      posTip(tip,svg,ev);};
+    h.addEventListener("mousemove",show); h.addEventListener("click",show);
+    h.addEventListener("mouseleave",()=>tip.style.opacity=0);
+  });
+  $("liabNote").innerHTML="Each month: <b>(what you own + salary) − (daily spending + cards + loan)</b>. Solid line is your entered months, dashed is projected from your latest month.";
+  const L2=S.liab;
+  const th=`<thead><tr><th>You owe</th><th>Amount (EGP)</th></tr></thead>`;
+  const tb="<tbody>"+Object.keys(L2).map(k=>`<tr><td>${esc(k)}</td>${nCell(L2[k],`data-liab="${esc(k)}"`,money)}</tr>`).join("")
+    +`<tr class="tot"><td>Total</td><td class="tnum">${money(C.liabToday)}</td></tr></tbody>`;
+  if(!LIVE) $("tbl3").innerHTML=th+tb;
+  const pth=`<thead><tr><th>Month</th><th>What you own</th><th>What you owe</th><th>Net worth</th></tr></thead>`;
+  const ptb="<tbody>"+pts.slice(1).map(p=>
+    `<tr class="${p.actual?"":"proj"}"><td class="namecell">${p.full}${p.actual?"":" ·"}</td><td class="tnum">${money(p.assets)}</td><td class="tnum">${money(p.liab)}</td><td class="tnum" style="color:${p.net<0?cssv('--neg'):cssv('--pos')};font-weight:600">${money(p.net)}</td></tr>`).join("")+"</tbody>";
+  $("tblProj").innerHTML=pth+ptb;
+}
+
+function renderSec4(C){
+  const scrub=$("scrub");
+  const maxIdx=C.projNet.length-1;
+  scrub.max=maxIdx;
+  if(S._scrub==null) S._scrub=0;
+  scrub.value=Math.min(S._scrub,maxIdx);
+  drawPlans(C);
+  scrub.oninput=()=>{S._scrub=+scrub.value;drawPlans(C);};
+}
+function scrubLabel(idx,C){ if(idx<=0)return "Today"; const p=C.timeline[idx]; return p?p.full:("month "+idx); }
+function drawPlans(C){
+  const idx=Math.min(S._scrub,C.projNet.length-1);
+  const pool=Math.max(0,C.projNet[idx]);
+  $("scrubMo").textContent=scrubLabel(idx,C);
+  $("scrubHint").textContent=idx<=0?"nothing saved yet — drag right":(pool<=0?"still catching up":("pool to split: "+money(pool)));
+  $("plans").innerHTML=S.plans.map(p=>{
+    const saved=pool*(+p.pct||0)/100, tgt=+p.target||0;
+    const prog=tgt>0?Math.min(1,saved/tgt):(saved>0?1:0);
+    return `<div class="plan"><div class="top"><b>${esc(p.name)}</b><span class="meta">${money(saved)}${tgt>0?" of "+money(tgt):""} · ${(prog*100).toFixed(prog<0.1?1:0)}%</span></div>
+      <div class="ptrack"><div class="pfill" style="width:${(prog*100).toFixed(1)}%"></div></div>
+      <div class="meta" style="margin-top:3px">${(+p.pct||0)}% of savings${tgt>0?" · full by "+fullByLabel(C,p,tgt):""}</div></div>`;
+  }).join("");
+  const th=`<thead><tr><th>Plan</th><th>% of savings</th><th>Target</th><th>Saved</th><th>Full by</th>${delHead()}</tr></thead>`;
+  let tb="<tbody>"+S.plans.map((p,i)=>{
+    const saved=pool*(+p.pct||0)/100,tgt=+p.target||0;
+    return `<tr>${tCell(p.name,`data-p="${i}" data-f="name"`)}${nCell(p.pct,`data-p="${i}" data-f="pct"`,v=>v+"%")}${nCell(p.target,`data-p="${i}" data-f="target"`)}<td class="tnum">${fmt(saved)}</td><td class="subtle">${tgt>0?fullByLabel(C,p,tgt):"—"}</td>${delCell(`data-delp="${i}"`)}</tr>`;
+  }).join("");
+  const sp=S.plans.reduce((s,p)=>s+(+p.pct||0),0);
+  tb+=`<tr class="tot"><td>Total</td><td class="tnum" style="color:${Math.round(sp)===100?'inherit':cssv('--neg')}">${sp}%</td><td></td><td></td><td></td>${ed()?"<td></td>":""}</tr></tbody>`;
+  if(!LIVE) $("tbl4").innerHTML=th+tb;
+}
+function fullByLabel(C,p,tgt){
+  const share=(+p.pct||0)/100;
+  if(share<=0)return "—";
+  for(let i=0;i<C.projNet.length;i++){ if(Math.max(0,C.projNet[i])*share>=tgt) return scrubLabel(i,C); }
+  return "beyond 10 yrs";
+}
+function posTip(tip,svg,ev){
+  const box=svg.closest(".chartbox").getBoundingClientRect();
+  let x=ev.clientX-box.left+12, y=ev.clientY-box.top+12;
+  tip.style.opacity=1;
+  const tw=tip.offsetWidth,th=tip.offsetHeight;
+  if(x+tw>box.width)x=ev.clientX-box.left-tw-12;
+  if(y+th>box.height)y=box.height-th-4;
+  tip.style.left=Math.max(2,x)+"px"; tip.style.top=Math.max(2,y)+"px";
+}
+
+function renderAll(){
+  const C=compute();
+  document.body.classList.toggle("mode-view",!ed());
+  $("mView").setAttribute("aria-pressed",!ed());
+  $("mEdit").setAttribute("aria-pressed",ed());
+  if(App.tab==="money"){ renderKpis(C); renderSec1(); renderSec2(); renderSec3(C); renderSec4(C); }
+}
+
+let DIRTY=false, _editedAt=0, _liveT=null;
+let _savedT=(function(){try{return +localStorage.getItem("ziad_dash_t")||0;}catch(e){return 0;}})();
+function setSaveBtn(state){ const b=$("saveBtn"); if(!b)return;
+  b.classList.remove("dirty","err");
+  if(state==="saving"){ b.textContent="Saving…"; b.classList.add("dirty"); }
+  else if(state==="saved"){ b.textContent="Saved ✓"; }
+  else if(state==="err"){ b.textContent="Save again"; b.classList.add("err"); }
+  else { b.textContent=DIRTY?"Save":"Saved ✓"; if(DIRTY)b.classList.add("dirty"); }
+}
+// Save button: commit the current edits straight to your account and show whether it worked.
+function saveNow(){
+  // pull in whatever is in the field that still has focus, so a half-typed number isn't lost
+  const a=document.activeElement; if(a&&a.matches&&a.matches("#tab-money input")){ try{applyEdit(a);}catch(_){}}
+  localSave(); DIRTY=true; setSaveBtn("saving");
+  App.renderAll();
+  pushRemote().then(ok=>{ setSaveBtn(ok===false?"err":"saved"); setTimeout(()=>setSaveBtn(),1600); });
+}
+function localSave(){ _savedT=Date.now(); try{localStorage.setItem("ziad_dash_v1",JSON.stringify(S));localStorage.setItem("ziad_dash_t",String(_savedT));}catch(_){} }
+function liveRender(){ clearTimeout(_liveT); _liveT=setTimeout(()=>{ LIVE=true; try{App.renderAll();}catch(_){} LIVE=false; },110); }
+function commit(){ localSave(); App.renderAll(); pushRemote(); }
+function applyEdit(t){
+  const num=parseNum(t.value);
+  if(t.dataset.m!=null&&t.dataset.s!=null){S.months[+t.dataset.m].split[+t.dataset.s]=num;return true;}
+  if(t.dataset.m!=null&&t.dataset.inc!=null){S.months[+t.dataset.m].income=num;return true;}
+  if(t.dataset.m!=null&&t.dataset.d!=null){S.months[+t.dataset.m].daily=num;return true;}
+  if(t.dataset.a!=null){const a=S.assets[+t.dataset.a];a[t.dataset.f]=t.dataset.f==="name"?t.value:num;return true;}
+  if(t.dataset.liab!=null){S.liab[t.dataset.liab]=num;return true;}
+  if(t.dataset.p!=null){const p=S.plans[+t.dataset.p];p[t.dataset.f]=t.dataset.f==="name"?t.value:num;return true;}
+  return false;
+}
+const root=$("tab-money");
+root.addEventListener("input",e=>{
+  const t=e.target; if(!t.matches("input")||t.id==="scrub")return;
+  if(applyEdit(t)){ _editedAt=Date.now(); DIRTY=true; localSave(); liveRender(); scheduleRemote(); }
+});
+root.addEventListener("change",e=>{
+  // Some phone keyboards fire `change` on every keystroke: never rebuild the input tables here.
+  const t=e.target; if(!t.matches("input")||t.id==="scrub")return;
+  if(Object.keys(t.dataset).length){ _editedAt=Date.now(); localSave(); liveRender(); pushRemote(); }
+});
+root.addEventListener("click",e=>{
+  const t=e.target;
+  if(t.id==="saveBtn"){ saveNow(); return; }
+  else if(t.id==="mView"||t.id==="mEdit"){MODE=t.id==="mEdit"?"edit":"view";try{localStorage.setItem("ziad_dash_mode",MODE);}catch(_){}App.renderAll();}
+  else if(t.dataset.hor!=null){HOR=+t.dataset.hor;try{localStorage.setItem("ziad_dash_hor",HOR);}catch(_){}App.renderAll();}
+  else if(t.id==="reset"){if(!window.__confirmReset){window.__confirmReset=1;t.textContent="Tap again to confirm";setTimeout(()=>{window.__confirmReset=0;t.textContent="Reset to my sheet";},2500);return;}const keep={rate:S.rate,cur:S.cur};S=seed();Object.assign(S,keep);commit();}
+  else if(t.id==="addMonth"){const ms=S.months,last=ms[ms.length-1]||{month:"October",year:2026,split:[0,0,0,0,5548,12000,26480],income:90000,daily:40000};
+    let mi=MONTHS.indexOf(last.month),y=last.year;mi++;if(mi>11){mi=0;y++;}
+    ms.push({month:MONTHS[mi],year:y,split:[...last.split],income:last.income,daily:last.daily});commit();}
+  else if(t.id==="addAsset"){S.assets.push({name:"New holding",amount:0,rate:0,ccy:"EGP"});commit();}
+  else if(t.id==="addPlan"){S.plans.push({name:"New plan",pct:0,target:0});commit();}
+  else if(t.dataset.delm!=null){S.months.splice(+t.dataset.delm,1);commit();}
+  else if(t.dataset.dela!=null){S.assets.splice(+t.dataset.dela,1);commit();}
+  else if(t.dataset.delp!=null){S.plans.splice(+t.dataset.delp,1);commit();}
+});
+
+// cross-device sync: the db doc "state/dashboard" holds {s,t}.
+// _docRef is kept for the life of the page: saving must never be switched off
+// by a one-off listener hiccup, and the live listener is only a bonus on top.
+let _docRef=null,_lastJSON=null,_pushT=null,_pushing=false,_pushAgain=false,_fails=0;
+function setStatus(t,err){ const a=$("asof"); if(!a)return; a.textContent=t; a.style.color=err?"var(--neg)":""; }
+function localSaveAt(t){ _savedT=t; try{localStorage.setItem("ziad_dash_v1",JSON.stringify(S));localStorage.setItem("ziad_dash_t",String(t));}catch(_){} }
+function scheduleRemote(){ if(!_docRef){ DIRTY=false; return; } clearTimeout(_pushT); _pushT=setTimeout(pushRemote,700); }
+function pushRemote(){
+  if(!_docRef){ DIRTY=false; localSave(); return Promise.resolve(true); }
+  if(_pushing){ _pushAgain=true; return Promise.resolve(true); }
+  _pushing=true;
+  const t=_savedT||Date.now(); const js=JSON.stringify(S); _lastJSON=js;
+  return _docRef.set({s:JSON.parse(js),t}).then(()=>{ _fails=0; DIRTY=false; setStatus("synced across your devices"); return true; })
+    .catch(e=>{ _fails++; const code=(e&&(e.code||e.message))||"error";
+      setStatus("saved on this phone only — "+code,true);
+      clearTimeout(_pushT); if(_fails<6) _pushT=setTimeout(pushRemote,Math.min(1500*_fails,8000)); return false; })
+    .then(r=>{ _pushing=false; if(_pushAgain){ _pushAgain=false; pushRemote(); } return r; });
+}
+async function initSync(db){
+  if(!db){ setStatus("saved on this phone"); return; }
+  let ref;
+  try{ ref=db.doc("state/dashboard"); }catch(e){ setStatus("saved on this phone"); return; }
+  try{
+    const snap=await ref.get();
+    _docRef=ref;
+    const d=snap.exists?snap.data():null;
+    if(d&&d.s&&(+d.t||0)>_savedT){
+      // the account copy is newer than this phone: use it
+      S=d.s; migrate(S); _lastJSON=JSON.stringify(S); localSaveAt(+d.t||Date.now()); App.renderAll();
+      setStatus("synced across your devices");
+    } else {
+      // this phone has the newer edits (or the account has none): save them up
+      if(!_savedT) localSave();
+      await pushRemote();
+    }
+  }catch(e){ _docRef=null; setStatus("saved on this phone — "+((e&&(e.code||e.message))||"offline"),true); return; }
+  try{
+    ref.onSnapshot(snap=>{
+      if(!snap.exists)return; const d=snap.data(); if(!d||!d.s)return;
+      if(ed()&&App.tab==="money")return;
+      if(DIRTY||_pushing)return;
+      if(Date.now()-_editedAt<4000)return;
+      if((+d.t||0)<=_savedT)return;
+      const js=JSON.stringify(d.s); if(js===_lastJSON)return;
+      if(snap.metadata&&snap.metadata.hasPendingWrites)return;
+      if(document.activeElement&&document.activeElement.tagName==="INPUT")return;
+      S=d.s; migrate(S); _lastJSON=js; localSaveAt(+d.t||Date.now()); App.renderAll();
+    },()=>{ /* keep _docRef so Save still writes even if the live listener drops */ });
+  }catch(e){}
+}
+document.addEventListener("visibilitychange",()=>{ if(document.hidden&&_docRef&&DIRTY){ clearTimeout(_pushT); pushRemote(); }});
+
+App.mods.money={
+  S:()=>S, compute, money, render:renderAll, initSync, assetEGP, parseNum,
+  setCur(c){S.cur=c; commit();},
+  setRate(r){S.rate=r; _editedAt=Date.now(); DIRTY=true; localSave(); liveRender(); scheduleRemote(); if(App.mods.invest) App.mods.invest.rateChanged(r);}
+};
+})();
+
+/* ================= INVESTING (tracker) ================= */
+(function(){
+const $=id=>document.getElementById(id);
+const TIER={low:['Low','var(--s3)'],medium:['Medium','var(--s1)'],high:['High','var(--s2)']};
+let usd=true, months=[], sel=null, S={rate:53.9,bought:{},values:{},history:{}}, stateRef=null, saveT=null, lastLocal=0;
+
+const n=v=>{if(v==null)return 0;let s=String(v).replace(/[٠-٩]/g,d=>d.charCodeAt(0)-0x0660).replace(/[۰-۹]/g,d=>d.charCodeAt(0)-0x06F0).replace(/[٫]/g,'.').replace(/[٬,\s]/g,'').replace(/[^0-9.\-]/g,'');const x=parseFloat(s);return isFinite(x)?x:0};
+const nowKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
+function syncShared(){ usd=App.cur()==='USD'; S.rate=App.rate(); }
+function money(vUSD){const x=usd?vUSD:vUSD*S.rate; const a=Math.abs(x), s=x<0?'-':''; return s+(usd?'$':'')+a.toLocaleString('en-US',{maximumFractionDigits:0})+(usd?'':' EGP')}
+function compact(vUSD){const x=usd?vUSD:vUSD*S.rate; const a=Math.abs(x), p=usd?'$':''; return (x<0?'-':'')+p+(a>=1e6?(a/1e6).toFixed(1)+'M':a>=1e4?Math.round(a/1e3)+'k':a>=1e3?(a/1e3).toFixed(1).replace(/\.0$/,'')+'k':Math.round(a))}
+const pctTxt=r=>(r>0?'+':'')+(r*100).toFixed(1)+'%';
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+// holdings come from every pick in every month, so new ideas show up automatically
+function holdings(){
+  const map=new Map();
+  months.forEach(m=>(m.picks||[]).forEach(p=>{ if(!map.has(p.id)) map.set(p.id,{id:p.id,name:p.name,where:p.where,tier:p.tier,cur:p.cur||'USD'}) }));
+  return [...map.values()];
+}
+function investedNative(id){let t=0;for(const k in S.bought){const b=S.bought[k]&&S.bought[k][id]; if(b) t+=n(b.native)} return t}
+function toUSD(v,cur){return cur==='EGP'? v/S.rate : v}
+function totals(){
+  let inv=0,val=0; holdings().forEach(h=>{ const i=investedNative(h.id); if(!i) return; const vv=S.values[h.id]; inv+=toUSD(i,h.cur); val+=toUSD(vv!=null&&vv!==''?n(vv):i,h.cur) });
+  return {inv,val};
+}
+function investedUSDAtCost(){let t=0;for(const k in S.bought)for(const id in S.bought[k]) t+=n(S.bought[k][id].usd);return t}
+function currentMonth(){ const now=nowKey(); return months.find(m=>m.key===sel)||months.filter(m=>m.key<=now).pop()||months[0]||null; }
+
+function renderHero(){
+  const t=totals(), cost=investedUSDAtCost(), gain=t.val-cost, r=cost?gain/cost:0;
+  $('i-hero').innerHTML=`<div class="stat"><span class="muted">Put in so far</span><b>${money(cost)}</b></div>
+  <div class="stat"><span class="muted">Worth now</span><b>${money(t.val)}</b></div>
+  <div class="stat ${gain<0?'neg':gain>0?'pos':''}"><span class="muted">Gain</span><b>${money(gain)}</b></div>
+  <div class="stat ${r<0?'neg':r>0?'pos':''}"><span class="muted">Return</span><b>${cost?pctTxt(r):'–'}</b></div>`;
+  $('i-hero-note').textContent=cost? 'Return is measured in dollars at your current rate, so a weaker pound shows up here.' : 'Numbers fill in once you tick your first purchase below.';
+}
+function renderChips(){
+  $('month-chips').innerHTML=months.map(m=>`<button class="chip" data-k="${m.key}" aria-pressed="${m.key===sel}">${esc(m.label)}</button>`).join('');
+  $('month-chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{sel=b.dataset.k;renderMonth();renderChips();renderPerProj();App.mods.overview&&App.mods.overview.render();});
+}
+function renderMonth(){
+  const m=months.find(x=>x.key===sel); $('month-empty').hidden=!!m; $('month-box').hidden=!m; if(!m) return;
+  $('m-updated').textContent=m.label+' · budget $'+m.budget+(m.updated?' · researched '+m.updated:'');
+  $('m-summary').textContent=m.summary||''; $('m-changes').textContent=m.changes||'';
+  const tt={low:0,medium:0,high:0}; (m.picks||[]).forEach(p=>tt[p.tier]=(tt[p.tier]||0)+n(p.amount));
+  const tot=Object.values(tt).reduce((a,b)=>a+b,0)||1;
+  $('m-tiers').innerHTML=Object.keys(TIER).filter(k=>tt[k]).map(k=>`<div style="flex:${tt[k]};background:${TIER[k][1]}">${TIER[k][0]} ${Math.round(tt[k]/tot*100)}%</div>`).join('');
+  const rate=n(m.rate)||S.rate, b=S.bought[m.key]||{};
+  // never rebuild the field being typed in
+  const a=document.activeElement; if(a&&a.classList.contains('amt')&&$('m-picks').contains(a)) return;
+  let rows='', last='';
+  (m.picks||[]).forEach(p=>{
+    if(p.tier!==last){ last=p.tier; const sum=(m.picks||[]).filter(q=>q.tier===p.tier).reduce((a,q)=>a+n(q.amount),0); rows+=`<tr><td colspan="4"><span class="dot" style="background:${TIER[p.tier][1]}"></span><b>${TIER[p.tier][0]} risk · $${sum}</b></td></tr>`; }
+    const got=b[p.id], amt=got?n(got.usd):n(p.amount);
+    const egp=p.cur==='EGP'?`<br><span class="muted">≈ ${Math.round(amt*rate).toLocaleString('en-US')} EGP</span>`:'';
+    rows+=`<tr><td><b class="tk2">${esc(p.name)}</b><br><span class="muted">${esc(p.note||'')}</span></td><td class="ink2">${esc(p.where)}</td>
+      <td class="r"><input class="in amt" data-id="${p.id}" id="amt-${m.key}-${p.id}" inputmode="decimal" value="${amt}" aria-label="Amount for ${esc(p.name)} in USD">${egp}</td>
+      <td class="r"><input type="checkbox" class="tick" data-id="${p.id}" id="tick-${m.key}-${p.id}" ${got?'checked':''} aria-label="Bought ${esc(p.name)}"></td></tr>`;
+  });
+  $('m-picks').innerHTML=rows;
+  const apply=(id)=>{ const p=m.picks.find(q=>q.id===id), tick=$('tick-'+m.key+'-'+id), a=n($('amt-'+m.key+'-'+id).value);
+    S.bought[m.key]=S.bought[m.key]||{};
+    if(tick.checked) S.bought[m.key][id]={usd:a,native:p.cur==='EGP'?Math.round(a*rate):a}; else delete S.bought[m.key][id];
+    save(); renderHero(); renderHoldings(); renderPerProj(); drawProj(); };
+  $('m-picks').querySelectorAll('.tick').forEach(c=>c.onchange=()=>apply(c.dataset.id));
+  $('m-picks').querySelectorAll('.amt').forEach(c=>c.oninput=()=>{ if($('tick-'+m.key+'-'+c.dataset.id).checked) apply(c.dataset.id) });
+}
+function holdingRow(h){
+  const i=investedNative(h.id), vv=S.values[h.id], v=vv!=null&&vv!==''?n(vv):null, r=i&&v!=null?(v-i)/i:null;
+  const sym=h.cur==='EGP'?'':'$', suf=h.cur==='EGP'?' EGP':'';
+  return {i,v,r,html:`<td><b class="tk2">${esc(h.name)}</b><br><span class="muted">${esc(h.where)}</span></td>
+    <td class="r num">${i?sym+Math.round(i).toLocaleString('en-US')+suf:'–'}</td>
+    <td class="r"><input class="in val" id="val-${h.id}" data-id="${h.id}" inputmode="decimal" placeholder="${h.cur}" value="${v!=null?v:''}" aria-label="Value now of ${esc(h.name)} in ${h.cur}"></td>
+    <td class="r" id="roi-${h.id}">${r==null?'<span class="muted">–</span>':`<span class="pill ${r>=0?'good':'bad'}">${pctTxt(r)}</span>`}</td>`};
+}
+function renderHoldings(){
+  const hs=holdings(); const body=$('h-rows');
+  if(!hs.length){ body.innerHTML='<tr><td colspan="4" class="muted">Your holdings appear here after the first monthly list.</td></tr>'; return; }
+  const active=document.activeElement; if(active&&active.classList.contains('val')){ hs.forEach(h=>{const c=$('roi-'+h.id); if(c){const x=holdingRow(h); c.innerHTML=x.r==null?'<span class="muted">–</span>':`<span class="pill ${x.r>=0?'good':'bad'}">${pctTxt(x.r)}</span>`}}); return; }
+  body.innerHTML=hs.map(h=>`<tr>${holdingRow(h).html}</tr>`).join('');
+  body.querySelectorAll('.val').forEach(inp=>inp.oninput=()=>{
+    const id=inp.dataset.id; if(inp.value.trim()==='') delete S.values[id]; else S.values[id]=n(inp.value);
+    const t=totals(); S.history[nowKey()]={value:Math.round(t.val),cost:Math.round(investedUSDAtCost())};
+    save(); renderHero(); renderHoldings(); renderPerProj(); drawProj(); });
+}
+const mr=r=>Math.pow(1+r,1/12)-1;
+function drawProj(){
+  const el=$('i-proj'); const first=months[0]; if(!first){ el.innerHTML='<p class="muted">The projection starts with your first month.</p>'; return; }
+  if(!el.clientWidth) return;
+  const [fy,fm]=first.key.split('-').map(Number); const N=121;
+  const flow=profitUSD(first.key,N);
+  const S3=[['Bad 3%',.03,'var(--s2)'],['Normal 8%',.08,'var(--s1)'],['Good 11%',.11,'var(--s3)']];
+  const lines=S3.map(s=>{const i=mr(s[1]);let v=0;const p=[];for(let k=0;k<N;k++){v=v*(1+i)+flow[k];p.push(v)}return p});
+  let acc=0; const put=flow.map(v=>acc+=v);
+  const actual=Object.entries(S.history).map(([k,o])=>{const [y,mo]=k.split('-').map(Number);return {i:(y-fy)*12+(mo-fm),v:n(o.value)}}).filter(a=>a.i>=0&&a.i<N);
+  const W=Math.max(300,el.clientWidth),H=260,L=46,R=84,T=12,B=26;
+  const y1=Math.ceil(Math.max(...lines[2])/50000)*50000, step=y1/5;
+  const x=i=>L+(W-L-R)*i/(N-1), y=v=>T+(H-T-B)*(1-v/y1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Projected and actual portfolio value">`;
+  for(let v=0;v<=y1+1;v+=step) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${compact(v)}</text>`;
+  for(let k=0;k<N;k+=(W<560?60:24)) s+=`<text x="${x(k)}" y="${H-6}" text-anchor="middle">${fy+Math.floor((fm-1+k)/12)}</text>`;
+  s+=`<path d="${put.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join('')}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  const ends=[];
+  S3.forEach((sr,k)=>{s+=`<path d="${lines[k].map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join('')}" fill="none" stroke="${sr[2]}" stroke-width="2"/>`;ends.push({n:sr[0],v:lines[k][N-1],y:y(lines[k][N-1])})});
+  ends.push({n:'Put in',v:put[N-1],y:y(put[N-1])}); ends.sort((a,b)=>a.y-b.y); for(let i=1;i<ends.length;i++) if(ends[i].y-ends[i-1].y<26) ends[i].y=ends[i-1].y+26;
+  ends.forEach(e=>s+=`<text x="${x(N-1)+8}" y="${e.y-2}" style="fill:var(--ink);font-weight:600">${compact(e.v)}</text><text x="${x(N-1)+8}" y="${e.y+11}">${e.n}</text>`);
+  actual.forEach(a=>s+=`<circle cx="${x(a.i)}" cy="${y(a.v)}" r="5" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"><title>${compact(a.v)}</title></circle>`);
+  s+='</svg>';
+  el.innerHTML=`<div class="legend">${S3.map(sr=>`<span><i style="background:${sr[2]}"></i>${sr[0]}</span>`).join('')}<span><i style="background:var(--muted)"></i>Put in</span><span><i class="dot" style="background:var(--ink);border-radius:50%"></i>You</span></div>`+s;
+}
+const FALLBACK={low:[-.05,.07,.12],medium:[-.2,.09,.16],high:[-.35,.11,.3]};
+// Monthly amounts invested, in USD, from the Money tab: each month's profit (income - installments - daily),
+// nothing in months that lose money. Starts at month key `fromKey`, length N.
+function profitUSD(fromKey,N){
+  const tl=App.mods.money.compute().timeline.filter(p=>p.key);
+  const map={}; tl.forEach(p=>map[p.key]=Math.max(0,p.profit)/(App.rate()||1));
+  const lastKey=tl.length?tl[tl.length-1].key:'', lastVal=tl.length?map[lastKey]:0;
+  const out=[]; let [y,m]=fromKey.split('-').map(Number);
+  for(let k=0;k<N;k++){ const key=y+'-'+String(m).padStart(2,'0'); out.push(map[key]!=null?map[key]:(key>lastKey?lastVal:0)); m++; if(m>12){m=1;y++;} }
+  return out;
+}
+function renderPerProj(){
+  const m=months.find(x=>x.key===sel)||months[months.length-1]; const body=$('pj-rows');
+  if(!m){ body.innerHTML='<tr><td colspan="7" class="muted">Projections appear with the first monthly list.</td></tr>'; return; }
+  const H=[6,12,24,36,48,60];
+  const flow=profitUSD(m.key,60);
+  const budget=(m.picks||[]).reduce((a,p)=>a+n(p.amount),0)||1;
+  const proj=(start,share,r)=>H.map(h=>{const i=mr(r);let v=start;for(let k=0;k<h;k++)v=v*(1+i)+share*flow[k];return v});
+  const cum=H.map(h=>flow.slice(0,h).reduce((a,b)=>a+b,0));
+  const tot=[0,1,2].map(()=>H.map(()=>0)); const put=H.map(()=>0);
+  const rows=(m.picks||[]).map(p=>{
+    const ret=Array.isArray(p.ret)&&p.ret.length===3?p.ret:FALLBACK[p.tier]||FALLBACK.medium;
+    const i=investedNative(p.id), vv=S.values[p.id], cur=p.cur||'USD';
+    const start=toUSD(vv!=null&&vv!==''?n(vv):i,cur), amt=n(p.amount), share=amt/budget;
+    const c=ret.map(r=>proj(start,share,r)); c.forEach((a,k)=>a.forEach((v,j)=>tot[k][j]+=v)); H.forEach((h,j)=>put[j]+=start+share*cum[j]);
+    return `<tr><td><b class="tk2">${esc(p.name)}</b><br><span class="muted">${Math.round(ret[1]*100)}% a year · ${Math.round(share*100)}% of profit</span></td>${H.map((h,j)=>`<td class="pj"><b>${compact(c[1][j])}</b><small>${compact(c[0][j])}–${compact(c[2][j])}</small></td>`).join('')}</tr>`;
+  });
+  rows.push(`<tr class="total"><td>Total</td>${H.map((h,j)=>`<td class="pj"><b>${compact(tot[1][j])}</b><small>${compact(tot[0][j])}–${compact(tot[2][j])}</small></td>`).join('')}</tr>`);
+  rows.push(`<tr><td class="muted">You put in</td>${H.map((h,j)=>`<td class="pj muted">${compact(put[j])}</td>`).join('')}</tr>`);
+  body.innerHTML=rows.join('');
+  $('pj-note').textContent='Each month adds that month\'s profit from the Money tab, split like this list (months with no profit add nothing). Yearly return assumptions from the '+(m.updated?'analysis of '+m.updated:'latest analysis')+', in dollars. Starts from your current values.';
+}
+function renderRaise(){
+  const fv=(a,yrs)=>{const i=mr(.08);let v=0;for(let k=0;k<yrs*12;k++)v=v*(1+i)+a;return v};
+  const b=Math.max(100,Math.round((n((months.find(x=>x.key===sel)||months[months.length-1]||{}).budget)||500)/50)*50);
+  $('raise').innerHTML=[...new Set([Math.round(b*0.5/50)*50,b,b+250,b+500])].map(a=>`<tr><td class="num"><b>$${a}</b> <span class="muted">≈ ${Math.round(a*S.rate/1000)}k EGP</span></td>${[5,10,20].map(yv=>`<td class="r num">${compact(fv(a,yv))}</td>`).join('')}</tr>`).join('');
+}
+// Month-by-month plan at a flat 10% a year: invested = that month's profit (0 if negative)
+function monthly(N){
+  const MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const startKey=(months[0]&&months[0].key)||(()=>{const d=new Date();return d.getMonth()===11?(d.getFullYear()+1)+'-01':d.getFullYear()+'-'+String(d.getMonth()+2).padStart(2,'0')})();
+  const tl=App.mods.money.compute(); const map={}; tl.timeline.filter(p=>p.key).forEach(p=>map[p.key]=p.profit/(App.rate()||1));
+  const keys=Object.keys(map).sort(), lastKey=keys[keys.length-1], lastVal=map[lastKey]||0;
+  const i=mr(.10); let [y,m]=startKey.split('-').map(Number);
+  let put=0, worth=0, all=tl.assetsToday/(App.rate()||1); const rows=[];
+  for(let k=0;k<N;k++){
+    const key=y+'-'+String(m).padStart(2,'0'); const p=map[key]!=null?map[key]:(key>lastKey?lastVal:0);
+    const inv=Math.max(0,p); put+=inv; worth=worth*(1+i)+inv; all=all*(1+i)+p;
+    rows.push({label:MN[m-1]+' '+y,key,inv,put,worth,all,actual:map[key]!=null});
+    m++; if(m>12){m=1;y++;}
+  }
+  return rows;
+}
+// Current holdings from the Money tab (EGP) + new investments ticked here (USD)
+function renderAllAssets(){
+  const M=App.mods.money, S2=M.S(), rate=App.rate()||1;
+  // group current holdings by category (Currency shows as one line), in USD
+  const gmap={}, order=[];
+  S2.assets.forEach(a=>{ const nm=a.cat||a.name; if(!gmap[nm]){gmap[nm]={name:nm,usd:0,src:'Current'};order.push(nm);} gmap[nm].usd+=M.assetEGP(a)/rate; });
+  const rows=order.map(nm=>gmap[nm]).filter(r=>r.usd>0);
+  const t=totals();
+  if(t.val>0) rows.push({name:'New monthly investments',usd:t.val,src:'Since Nov 2026'});
+  rows.sort((a,b)=>b.usd-a.usd);
+  const tot=rows.reduce((s,r)=>s+r.usd,0)||1, cur=rows.filter(r=>r.src==='Current').reduce((s,r)=>s+r.usd,0);
+  const owe=M.compute().liabToday/rate;
+  $('all-stats').innerHTML=`<div class="stat"><span class="muted">Total you own</span><b>${money(tot)}</b></div>
+    <div class="stat"><span class="muted">Current holdings</span><b>${money(cur)}</b></div>
+    <div class="stat"><span class="muted">New since November</span><b>${money(t.val)}</b></div>
+    <div class="stat ${tot>=owe?'pos':'neg'}"><span class="muted">${tot>=owe?'Debts covered':'Short of covering debts'}</span><b>${tot>=owe?money(tot-owe)+' spare':money(owe-tot)}</b></div>`;
+  const pal=['var(--s1)','var(--s3)','var(--s4)','var(--s7)','var(--s2)','var(--s5)','var(--s6)','var(--s8)'];
+  const max=Math.max(...rows.map(r=>r.usd),1);
+  $('all-bars').innerHTML=rows.map((r,i)=>`<div class="abar"><span>${esc(r.name)}</span><div class="track"><div class="fill" style="width:${Math.max(2,r.usd/max*100).toFixed(1)}%;background:${pal[i%pal.length]}"></div></div><span class="amt tnum">${money(r.usd)} · ${(r.usd/tot*100).toFixed(0)}%</span></div>`).join('');
+  $('all-table').innerHTML=`<thead><tr><th>Holding</th><th>Type</th><th>Value</th><th>Share</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td class="namecell">${esc(r.name)}</td><td class="subtle">${r.src}</td><td class="tnum">${money(r.usd)}</td><td class="tnum">${(r.usd/tot*100).toFixed(0)}%</td></tr>`).join('')+
+    `<tr class="tot"><td>Total</td><td></td><td class="tnum">${money(tot)}</td><td class="tnum">100%</td></tr></tbody>`;
+}
+function renderMonthly(){
+  const R=monthly(60);
+  const at=k=>R[Math.min(k,R.length)-1];
+  $('mm-stats').innerHTML=[[12,'In 1 year'],[36,'In 3 years'],[60,'In 5 years']].map(([k,l])=>{const r=at(k);
+    return `<div class="stat"><span class="muted">${l} (${r.label})</span><b>${money(r.all)}</b><span class="muted">all assets · new investments ${money(r.worth)}</span></div>`}).join('');
+  $('mm-table').innerHTML=`<thead><tr><th>Month</th><th>Invest</th><th>Put in so far</th><th>New investments</th><th>All your assets</th></tr></thead><tbody>`+
+    R.map(r=>`<tr class="${r.actual?'':'proj'}"><td class="namecell">${r.label}</td><td class="tnum">${r.inv>0?money(r.inv):'–'}</td><td class="tnum">${money(r.put)}</td><td class="tnum">${money(r.worth)}</td><td class="tnum" style="font-weight:600">${money(r.all)}</td></tr>`).join('')+'</tbody>';
+  const el=$('mm-chart'); if(!el.clientWidth) return;
+  const W=Math.max(300,el.clientWidth),H=220,L=50,Rr=12,T=12,B=26,N=R.length;
+  const max=Math.max(...R.map(r=>r.all),1), min=Math.min(0,...R.map(r=>r.all));
+  const x=k=>L+(W-L-Rr)*k/(N-1), yv=v=>T+(H-T-B)*(1-(v-min)/(max-min||1));
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Assets month by month at 10% a year">`;
+  for(let t=0;t<=4;t++){const v=min+(max-min)*t/4; s+=`<line x1="${L}" x2="${W-Rr}" y1="${yv(v)}" y2="${yv(v)}" stroke="var(--line)"/><text x="${L-6}" y="${yv(v)+4}" text-anchor="end">${compact(v)}</text>`;}
+  for(let k=0;k<N;k+=12) s+=`<text x="${x(k)}" y="${H-6}" text-anchor="middle">${R[k].label.split(' ')[1]}</text>`;
+  const path=f=>R.map((r,k)=>(k?'L':'M')+x(k).toFixed(1)+' '+yv(f(r)).toFixed(1)).join('');
+  s+=`<path d="${path(r=>r.put)}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  s+=`<path d="${path(r=>r.worth)}" fill="none" stroke="var(--s3)" stroke-width="2"/>`;
+  s+=`<path d="${path(r=>r.all)}" fill="none" stroke="var(--s1)" stroke-width="2.2"/>`;
+  s+='</svg>';
+  el.innerHTML=`<div class="legend"><span><i style="background:var(--s1)"></i>All your assets</span><span><i style="background:var(--s3)"></i>New investments</span><span><i style="background:var(--muted)"></i>Put in</span></div>`+s;
+}
+function renderAll(){ syncShared(); if(App.tab!=="invest") return;
+  renderAllAssets(); renderHero(); renderMonthly(); renderChips(); renderMonth(); renderHoldings(); renderPerProj(); drawProj(); renderRaise(); }
+
+function save(){ lastLocal=Date.now(); try{localStorage.setItem('it_state',JSON.stringify(S))}catch(e){}
+  if(!stateRef) return; clearTimeout(saveT); saveT=setTimeout(()=>{ stateRef.set({s:JSON.stringify(S),t:Date.now()}).catch(()=>{}) },600); }
+
+try{const l=JSON.parse(localStorage.getItem('it_state')||'null'); if(l) S=Object.assign(S,l)}catch(e){}
+
+const TRIG='trig_01AvZ4ifJ4vpqSWNb7X5WhLM';
+function showReq(){ const r=S.lastRequest; if(r) $('refresh-status').textContent='Last requested '+new Date(r).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'.'; }
+showReq();
+$('refresh-btn').onclick=async()=>{
+  const btn=$('refresh-btn'), st=$('refresh-status'); btn.disabled=true; st.textContent='Sending the request…';
+  const mcp=window.claude&&window.claude.use? await window.claude.use('mcp'):null;
+  if(!mcp){ st.textContent='Message me in the Claude project and ask for new analysis. I will add the new list to your app.'; btn.disabled=false; return; }
+  try{
+    await mcp.callTool('Claude Code Remote','fire_trigger',{trigger_id:TRIG,text:'On-demand refresh requested from the tracker page at '+new Date().toISOString()+'. Refresh the list for the month currently shown as upcoming or current, including ret assumptions.'},{cache:false});
+    S.lastRequest=Date.now(); save(); st.textContent='Requested. The new list and projections should appear here in about 15 minutes.';
+  }catch(e){
+    const c=e&&e.code;
+    st.textContent= c==='needs_reauth'?'Reconnect Claude Code Remote in claude.ai Settings, Connectors, then try again.'
+      : c==='server_not_connected'?'Add the Claude Code Remote connector in claude.ai Settings, Connectors, or message me in the project instead.'
+      : c==='not_in_manifest'||c==='approval_required'||c==='consent_required'?'The request needs your approval. Tap the button again and choose Allow when claude.ai asks.'
+      : c==='server_unavailable'?'The service did not answer. It may still have gone through; wait a few minutes before trying again.'
+      : 'The request did not go through ('+(c||'error')+'). Message me in the project and ask for new analysis instead.';
+  }
+  btn.disabled=false;
+};
+
+function initSync(db){
+  if(!db){
+    fetch('months.json',{cache:'no-cache'}).then(r=>r.json()).then(list=>{
+      months=list.sort((a,b)=>a.key<b.key?-1:1);
+      const now=nowKey(); const cur=months.filter(m=>m.key<=now).pop(); const next=months.find(m=>m.key>now);
+      sel=(next&&!cur?next:cur||next||{}).key||null; if(cur&&next&&new Date().getDate()>=25) sel=next.key;
+      App.renderAll();
+    }).catch(()=>{});
+    return;
+  }
+  stateRef=db.doc('tracker/state');
+  db.collection('months').onSnapshot(snap=>{
+    months=snap.docs.map(d=>Object.assign({key:d.id},d.data())).sort((a,b)=>a.key<b.key?-1:1);
+    const now=nowKey(); if(!sel||!months.some(m=>m.key===sel)){ const cur=months.filter(m=>m.key<=now).pop(); const next=months.find(m=>m.key>now); sel=(next&&!cur?next:cur||next||{}).key||null; if(cur&&next&&new Date().getDate()>=25) sel=next.key; }
+    App.renderAll();
+  },()=>{$('i-offline').hidden=false});
+  stateRef.onSnapshot(snap=>{
+    if(!snap.exists) return;
+    if(Date.now()-lastLocal<3000) return;
+    const d=snap.data(); try{ S=Object.assign({rate:53.9,bought:{},values:{},history:{}},JSON.parse(d.s)); }catch(e){ return; } showReq();
+    const a=document.activeElement; if(a&&a.classList&&a.classList.contains('in')) { syncShared(); renderHero(); drawProj(); return; }
+    App.renderAll();
+  });
+}
+
+App.mods.invest={
+  render:renderAll, initSync,
+  rateChanged(r){ S.rate=r; save(); },
+  profitUSD,
+  budget(){ const m=months.find(x=>x.key===sel)||months[months.length-1]; return Math.round(n(m&&m.budget))||500; },
+  summary(){ syncShared(); const t=totals(), cost=investedUSDAtCost(); const m=months.find(x=>x.key===sel)||null;
+    const picks=m?(m.picks||[]):[]; const b=m?(S.bought[m.key]||{}):{};
+    const done=picks.filter(p=>b[p.id]).length;
+    return {cost,val:t.val,gain:t.val-cost,ret:cost?(t.val-cost)/cost:null,month:m,done,count:picks.length,money,pctTxt}; }
+};
+})();
+
+/* ================= PLAN (growth plan + $500 portfolio) ================= */
+(function(){
+let usd=false, RATE=53.9;
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const lbl=m=>MON[(10+m)%12]+' '+(2026+Math.floor((10+m)/12));
+const shortLbl=m=>MON[(10+m)%12]+" '"+String(2026+Math.floor((10+m)/12)).slice(2);
+function fmt(v,compact){
+  const x=usd? v/RATE : v; const sym=usd?'$':''; const suf=usd?'':' EGP';
+  const a=Math.abs(x), s=x<0?'-':'';
+  if(compact){ if(a>=1e6) return s+sym+(a/1e6).toFixed(a>=1e7?0:1)+'M'; if(a>=1e3) return s+sym+Math.round(a/1e3)+'k'; return s+sym+Math.round(a); }
+  return s+sym+Math.round(a).toLocaleString('en-US')+suf;
+}
+const KNOWN={0:[180000,[26691,13953,0,700,5548,12000]],1:[180000,[12591,12641,0,700,5548,12000]],2:[90000,[12591,11329,0,700,5548,12000]],3:[90000,[12591,11329,0,700,5548,12000]],4:[90000,[12591,11329,5106,700,5548,12000]],5:[90000,[925,9662,5106,700,5548,12000]],6:[90000,[0,0,5106,700,5548,12000]],7:[90000,[0,0,5106,0,5548,12000]]};
+function months(boost,N){
+  const out=[]; let loan=450000, nawy=338227, inst=210000;
+  for(let m=0;m<N;m++){
+    const [inc,sp0]=KNOWN[m]||[90000,[0,0,0,0,5548,12000]]; const sp=sp0.slice();
+    const lp=Math.min(26480,loan); loan-=lp;
+    const np=Math.min(sp[4],nawy); nawy-=np; sp[4]=np;
+    const cards=sp[0]+sp[1]+sp[2]+sp[3]; inst=Math.max(0,inst-cards*210000/186138);
+    const spare=inc-40000-sp.reduce((a,b)=>a+b,0)-lp+(m>=6?boost:0);
+    out.push({spare,liab:loan+nawy+(m>=7?0:inst)});
+  }
+  return out;
+}
+const PLANS=[["2 year baby run",30,2000000],["Egypt travel",5,50000],["Travel abroad",15,750000],["Rolex watch",5,500000],["Salma accessories",5,500000],["Home furniture",10,150000],["New car",25,800000]];
+const ORDER=["Egypt travel","Home furniture","New car","Travel abroad","Rolex watch","Salma accessories","2 year baby run"];
+const TGT=Object.fromEntries(PLANS.map(p=>[p[0],p[2]]));
+const mr=r=>Math.pow(1+r,1/12)-1;
+function goals(rbuf,r,boost,ordered,N=264){
+  const f=months(boost,N), pots={}, reached={}; PLANS.forEach(p=>pots[p[0]]=0);
+  const rb=mr(rbuf), rm=mr(r); let buf=90000;
+  for(let m=0;m<N;m++){
+    buf*=1+rb; for(const k in pots) pots[k]*=1+rm;
+    let x=f[m].spare; if(m<6){buf+=x;continue}
+    x=Math.max(x,0); if(buf>150000){x+=buf-150000;buf=150000}
+    const infl=Math.pow(1+mr(0.10),m);
+    if(ordered){
+      for(const nm of ORDER){ if(nm in reached) continue; const t=TGT[nm]*infl; const put=Math.min(t-pots[nm],x); pots[nm]+=put; x-=put; if(pots[nm]>=t-1) reached[nm]=m; if(x<=0) break; }
+    } else {
+      const act=PLANS.filter(p=>!(p[0] in reached)); const tot=act.reduce((a,p)=>a+p[1],0)+5;
+      act.forEach(p=>pots[p[0]]+=x*p[1]/tot);
+      act.forEach(p=>{ if(pots[p[0]]>=p[2]*infl) reached[p[0]]=m; });
+    }
+  }
+  return reached;
+}
+const G={today:goals(0,0,0,false), plan:goals(0.15,0.14,0,true), boost:goals(0.15,0.14,10000,true)};
+const when=(g,nm)=> nm in g ? lbl(g[nm]) : 'after 2048';
+const HOLD=[[120400,.05],[208400,.09],[40000,.15],[170000,.18],[45000,.17],[20000,.14]];
+function networth(mode){
+  const N=61, f=months(mode==='boost'?10000:0,N), pts=[];
+  const hold=HOLD.map(h=>h.slice()); let cash=90000, pot=0;
+  const invest=mode!=='today', rb=mr(invest?.15:0), rp=mr(.14);
+  pts.push(693800-998227);
+  for(let m=0;m<N-1;m++){
+    hold.forEach(h=>h[0]*=1+mr(h[1]));
+    cash*=1+rb; pot*=1+rp; cash+=f[m].spare;
+    if(invest && m>=6 && cash>150000){pot+=cash-150000;cash=150000}
+    pts.push(hold.reduce((a,h)=>a+h[0],0)+cash+pot-f[m].liab);
+  }
+  return pts;
+}
+const OPTS=[
+ ["Cash at home (EGP)",[0,0,0],"None, but loses value","Instantly"],
+ ["Money market fund (Thndr savings)",[.12,.15,.18],"Very low","1 to 2 days"],
+ ["Bank certificate, 3 year fixed",[.18,.18,.18],"Very low","Locked, fee to break"],
+ ["Treasury bills (after 20% tax)",[.12,.14,.16],"Very low","3 to 12 months"],
+ ["Dollar cash",[0,.05,.12],"Low","Instantly"],
+ ["Gold (fund or bars)",[-.10,.09,.22],"Medium","Days"],
+ ["S&P 500 fund on IBKR",[-.15,.13,.25],"Medium","Days, transfers are slow"],
+ ["Your 4 US tech stocks",[-.30,.14,.35],"High","Days"],
+ ["EGX30 Egyptian stocks (Thndr)",[-.15,.17,.35],"High","Days"],
+ ["Bitcoin and Ethereum",[-.60,.15,.80],"Very high","Instantly"]];
+const RISKCLASS={"Very low":"good","Low":"good","Medium":"warn","High":"bad","Very high":"bad","None, but loses value":"warn"};
+function fv(r){const i=mr(r);let v=0;for(let m=0;m<60;m++)v=v*(1+i)+10000;return v}
+const pct=r=>(r>0?'+':'')+Math.round(r*100)+'%';
+function niceStep(range,ticks){const raw=range/ticks, p=Math.pow(10,Math.floor(Math.log10(raw))); const q=raw/p; return (q<1.5?1:q<3?2:q<7?5:10)*p}
+
+function drawFlow(){
+  const el=document.getElementById('flow-chart'); if(!el.clientWidth) return; const N=26; const f=months(0,N).map(d=>d.spare);
+  const W=Math.max(300,el.clientWidth),H=240,L=46,R=8,T=12,B=28; const lo=Math.min(0,...f), hi=Math.max(...f);
+  const step=niceStep(hi-lo,4), y0=Math.floor(lo/step)*step, y1=Math.ceil(hi/step)*step;
+  const y=v=>T+(H-T-B)*(1-(v-y0)/(y1-y0)); const bw=(W-L-R)/N;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Money left each month">`;
+  for(let v=y0;v<=y1+1;v+=step){ s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="${v===0?1.5:1}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${fmt(v,true)}</text>`; }
+  f.forEach((v,i)=>{ const x=L+i*bw+1, w=bw-2, yt=Math.min(y(v),y(0)), h=Math.max(1,Math.abs(y(v)-y(0)));
+    s+=`<rect class="hit" data-i="${i}" x="${x}" y="${yt}" width="${w}" height="${h}" rx="2" fill="${v<0?'var(--s2)':'var(--s1)'}"/>`;
+    if(i%(W<560?6:3)===0) s+=`<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${shortLbl(i)}</text>`; });
+  const xl=L+17*bw; s+=`<line x1="${xl}" x2="${xl}" y1="${T}" y2="${y(0)}" stroke="var(--muted)" stroke-dasharray="3 3"/><text x="${xl+4}" y="${T+10}">loan paid off</text>`;
+  s+='</svg>';
+  el.innerHTML=`<div class="legend"><span><i style="background:var(--s1)"></i>Money left</span><span><i style="background:var(--s2)"></i>Short that month</span></div>`+s+'<div class="ptip" hidden></div>';
+  const tip=el.querySelector('.ptip');
+  el.querySelectorAll('.hit').forEach(r=>{
+    const show=()=>{const i=+r.dataset.i; const b=el.getBoundingClientRect(), rb=r.getBoundingClientRect(); tip.textContent=lbl(i)+': '+fmt(f[i]); tip.style.left=(rb.left-b.left+rb.width/2)+'px'; tip.style.top=(Math.min(rb.top,rb.bottom)-b.top)+'px'; tip.hidden=false;};
+    r.addEventListener('mouseenter',show); r.addEventListener('click',show); r.addEventListener('mouseleave',()=>tip.hidden=true);
+  });
+}
+function lineChart(el,S,N,xlab,fmtv){
+  if(!el.clientWidth) return;
+  const W=Math.max(300,el.clientWidth),H=270,L=46,R=84,T=14,B=28;
+  const all=S.flatMap(s=>s[1]); const step=niceStep(Math.max(...all)-Math.min(0,...all),5);
+  const y0=Math.floor(Math.min(0,...all)/step)*step, y1=Math.ceil(Math.max(...all)/step)*step;
+  const x=i=>L+(W-L-R)*i/(N-1), y=v=>T+(H-T-B)*(1-(v-y0)/(y1-y0));
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  for(let v=y0;v<=y1+1;v+=step) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="${v===0?1.5:1}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${fmtv(v)}</text>`;
+  xlab.forEach(([i,t])=>s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${t}</text>`);
+  const ends=S.map(sr=>({n:sr[0],v:sr[1][N-1],y:y(sr[1][N-1])})).sort((a,b)=>a.y-b.y);
+  for(let i=1;i<ends.length;i++) if(ends[i].y-ends[i-1].y<26) ends[i].y=ends[i-1].y+26;
+  S.forEach(sr=>{ s+=`<path d="${sr[1].map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join('')}" fill="none" stroke="${sr[2]}" stroke-width="2" stroke-linejoin="round"${sr[3]?' stroke-dasharray="4 4"':''}/>`; if(!sr[3]) s+=`<circle cx="${x(N-1)}" cy="${y(sr[1][N-1])}" r="4" fill="${sr[2]}" stroke="var(--panel)" stroke-width="2"/>`; });
+  ends.forEach(e=>{ s+=`<text x="${x(N-1)+8}" y="${e.y-2}" style="fill:var(--ink);font-weight:600">${fmtv(e.v)}</text><text x="${x(N-1)+8}" y="${e.y+11}">${e.n}</text>`; });
+  s+='</svg>';
+  el.innerHTML=`<div class="legend">${S.map(sr=>`<span><i style="background:${sr[2]}"></i>${sr[0]}</span>`).join('')}</div>`+s;
+}
+function drawNW(){
+  const el=document.getElementById('nw-chart'), N=61, W=el.clientWidth;
+  const S=[["Today's way",networth('today'),'var(--s2)'],["The plan",networth('plan'),'var(--s1)'],["Plan + boost",networth('boost'),'var(--s3)']];
+  const xl=[]; for(let yr=0;yr<=5;yr++) xl.push([yr*12, yr===0?'Now':(W<560?"'"+String(2026+yr).slice(2):'Oct '+(2026+yr))]);
+  lineChart(el,S,N,xl,v=>fmt(v,true));
+}
+function drawP5(){
+  const S3=[["Bad 3%",.03,'var(--s2)'],["Normal 8%",.08,'var(--s1)'],["Good 11%",.11,'var(--s3)']];
+  const d=new Date(), fk=d.getFullYear()+'-'+String(d.getMonth()+2>12?1:d.getMonth()+2).padStart(2,'0');
+  const startKey=d.getMonth()===11?(d.getFullYear()+1)+'-01':fk;
+  const flow=App.mods.invest.profitUSD(startKey,360);
+  const avg=Math.round(flow.slice(0,12).reduce((a,b)=>a+b,0)/12/10)*10;
+  document.getElementById('p5-amt').textContent='Each month\'s profit from the Money tab (about $'+avg.toLocaleString('en-US')+' a month on average over the next year)';
+  document.getElementById('p5-title').textContent='How investing your profit could grow';
+  const series=S3.map(s=>{const i=mr(s[1]);let v=0;const p=[0];for(let m=1;m<=360;m++){v=v*(1+i)+flow[m-1];if(m%12===0)p.push(v)}return p});
+  let acc=0; const put=[0]; flow.forEach((v,k)=>{acc+=v; if((k+1)%12===0) put.push(acc);});
+  const f=v=>v>=1e6?'$'+(v/1e6).toFixed(2)+'M':'$'+Math.round(v/1000)+'k';
+  document.getElementById('p5-stats').innerHTML=[10,20,30].map(yv=>`<div class="stat"><span class="muted">After ${yv} years (${2026+yv})</span><b>${f(series[1][yv])}</b><span class="muted">You put in ${f(put[yv])} · ${f(series[0][yv])} to ${f(series[2][yv])}</span></div>`).join('');
+  const el=document.getElementById('p5-proj'), W=el.clientWidth;
+  const xl=[]; for(let yr=0;yr<=30;yr+=(W<560?10:5)) xl.push([yr,String(2026+yr)]);
+  lineChart(el,S3.map((s,k)=>[s[0],series[k],s[2]]).concat([["Put in",put,'var(--muted)',true]]),31,xl,v=>v===0?'$0':f(v));
+}
+function markPhase(){
+  const d=new Date(), k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  document.querySelectorAll('.phase').forEach(p=>p.classList.toggle('now',k>=p.dataset.from&&k<=p.dataset.to));
+}
+function render(){
+  usd=App.cur()==='USD'; RATE=App.rate();
+  if(App.tab!=="plan") return;
+  document.querySelectorAll('#tab-plan [data-v]').forEach(e=>e.textContent=fmt(+e.dataset.v));
+  document.getElementById('a-egy-old').textContent=when(G.today,'Egypt travel');
+  document.getElementById('a-egy-new').textContent=when(G.plan,'Egypt travel');
+  document.querySelector('#opt-table tbody').innerHTML=OPTS.map(o=>`<tr><td><b style="font-weight:600">${o[0]}</b></td><td class="r num">${o[1].map(pct).join(' · ')}</td><td><span class="pill ${RISKCLASS[o[2]]||''}">${o[2]}</span></td><td class="ink2">${o[3]}</td><td class="r num"><b style="font-weight:600">${fmt(fv(o[1][1]),true)}</b><br><span class="muted">${fmt(fv(o[1][0]),true)} to ${fmt(fv(o[1][2]),true)}</span></td></tr>`).join('');
+  document.querySelector('#plan-table tbody').innerHTML=ORDER.map(nm=>`<tr><td>${nm}</td><td class="r num">${fmt(TGT[nm],true)}</td><td class="r num ink2">${when(G.today,nm)}</td><td class="r num"><b style="font-weight:600">${when(G.plan,nm)}</b></td><td class="r num">${when(G.boost,nm)}</td></tr>`).join('');
+  markPhase(); drawFlow(); drawNW(); drawP5();
+}
+App.mods.plan={render,
+  summary(){ markPhase(); const ph=document.querySelector('.phase.now'); const first=ORDER.find(nm=>nm in G.plan);
+    return {phase:ph?ph.querySelector('h3').textContent.replace(/^\d\.\s*/,''):'', phaseWhen:ph?ph.querySelector('.when').textContent:'', firstGoal:first, firstWhen:first?when(G.plan,first):''}; }
+};
+})();
+
+/* ================= OVERVIEW ================= */
+(function(){
+const $=id=>document.getElementById(id);
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const row=(k,v,cls)=>`<div class="ovrow"><span>${k}</span><b class="${cls||''}">${v}</b></div>`;
+function render(){
+  if(App.tab!=="overview") return;
+  const M=App.mods.money, C=M.compute(), S=M.S(), money=M.money;
+  const net=C.assetsToday-C.liabToday, be=C.beIdx>0?C.timeline[C.beIdx]:null;
+  const I=App.mods.invest.summary();
+  $("ov-kpis").innerHTML=[
+    {lab:"Net today",val:money(net),cls:net<0?"neg":"pos",sub:net<0?"you owe more than you own":"in the black"},
+    {lab:"Break even",val:be?be.full:"not yet",cls:be?"pos":"",sub:be?"in "+C.beIdx+" month"+(C.beIdx>1?"s":""):"add more months"},
+    {lab:"Investments worth",val:I.money(I.val),sub:I.cost?"put in "+I.money(I.cost):"tick your first buy"},
+    {lab:"Investment return",val:I.ret==null?"–":I.pctTxt(I.ret),cls:I.ret==null?"":(I.ret<0?"neg":"pos"),sub:"in dollars"}
+  ].map(x=>`<div class="kpi"><div class="lab">${x.lab}</div><div class="val ${x.cls||""}">${x.val}</div><div class="sub">${x.sub}</div></div>`).join("");
+
+  // money: the next month you entered from today on
+  const d=new Date(); const ym=d.getFullYear()*12+d.getMonth();
+  const m=S.months.find(x=>x.year*12+MONTHS.indexOf(x.month)>=ym)||S.months[0];
+  let html="";
+  if(m){ const out=m.split.reduce((s,v)=>s+(+v||0),0)+(+m.daily||0), left=(+m.income||0)-out;
+    $("ov-m-when").textContent=m.month+" "+m.year;
+    html+=row("Money in",money(+m.income||0))+row("Money out",money(out))+row("Left over",money(left),left<0?"neg":"pos");
+  }
+  html+=row("What you own",money(C.assetsToday))+row("What you owe",money(C.liabToday));
+  $("ov-money").innerHTML=html;
+
+  // investing
+  if(I.month){
+    $("ov-i-when").textContent=I.month.label;
+    const picks=I.month.picks||[]; const budget=picks.reduce((a,p)=>a+(+p.amount||0),0);
+    $("ov-inv").innerHTML=row("This month's list","$"+budget.toLocaleString("en-US")+" · "+picks.length+" buys")+row("Bought so far",I.done+" of "+I.count,I.done&&I.done===I.count?"pos":"")+row("Put in so far",I.money(I.cost))+row("Next market analysis","the 24th");
+    $("ov-i-prog").style.width=(I.count?I.done/I.count*100:0)+"%";
+  } else {
+    $("ov-i-when").textContent="";
+    $("ov-inv").innerHTML=row("This month's list","loading…")+row("Next market analysis","the 24th");
+  }
+  // plan
+  const P=App.mods.plan.summary();
+  const firstPlan=S.plans.filter(p=>+p.target>0)[0];
+  $("ov-plan").innerHTML=row("Step now",P.phase||"–")+row("When",P.phaseWhen||"–")+row("First goal",(P.firstGoal||"–"))+row("Reached by",P.firstWhen||"–")+row("Monthly investing","$"+App.mods.invest.budget().toLocaleString("en-US")+" · 50/20/10/20");
+}
+App.mods.overview={render};
+})();
+
+/* ---------- boot ---------- */
+let startTab="overview";
+try{ startTab=localStorage.getItem("zm_tab")||"overview"; }catch(e){}
+const h=(location.hash||"").slice(1); if(["overview","money","invest","plan"].includes(h)) startTab=h;
+App.show(startTab);
+let _rz; window.addEventListener("resize",()=>{clearTimeout(_rz);_rz=setTimeout(()=>App.renderAll(),150);});
+/* ---------- PIN lock: hides the page until the PIN is entered. The PIN is kept only as a hash. ---------- */
+const Lock=(function(){
+  const $=id=>document.getElementById(id);
+  let H=null, ref=null, hiddenAt=0;
+  const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+  const ss={get:k=>{try{return sessionStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}}};
+  async function hash(pin){
+    const txt="ziads-money:"+pin;
+    try{ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+    catch(e){ let h=5381; for(const c of txt) h=((h<<5)+h+c.charCodeAt(0))|0; return "d"+(h>>>0).toString(16); }
+  }
+  function open(){ $("lock").hidden=true; }
+  function ask(){ $("lock").hidden=false; $("lock-msg").textContent="This page is locked."; $("lock-entry").hidden=false; $("lock-pin").value=""; setTimeout(()=>$("lock-pin").focus(),50); }
+  function apply(h){ H=h||null; ls.set("zm_pinhash",H);
+    if(H && ss.get("zm_unlocked")!==H) ask(); else open(); settings(); }
+  function settings(){
+    $("pin-state").textContent=H?"The page asks for your PIN each time you open it, and again after 2 minutes away.":"No PIN yet. Set one so the page asks for it every time it opens.";
+    $("pin-cur-row").hidden=!H; $("pin-remove").hidden=!H; $("pin-save").textContent=H?"Change PIN":"Save PIN";
+  }
+  $("lock-form").addEventListener("submit",async e=>{ e.preventDefault();
+    const h=await hash($("lock-pin").value.trim());
+    if(h===H){ ss.set("zm_unlocked",H); $("lock-err").textContent=""; open(); App.renderAll(); }
+    else { $("lock-err").textContent="That PIN is not right. Try again."; $("lock-pin").value=""; }
+  });
+  async function store(h){ ls.set("zm_pinhash",h); if(ref){ try{ await ref.set({h:h||"",t:Date.now()}); }catch(e){ return false; } } return true; }
+  $("pin-save").onclick=async()=>{
+    const nw=$("pin-new").value.trim(), msg=$("pin-msg");
+    if(!/^\d{4,8}$/.test(nw)){ msg.textContent="Use 4 to 8 digits."; return; }
+    if(H && await hash($("pin-cur").value.trim())!==H){ msg.textContent="The current PIN is not right."; return; }
+    const h=await hash(nw); const ok=await store(h); H=h; ss.set("zm_unlocked",h); settings();
+    $("pin-new").value=""; $("pin-cur").value="";
+    msg.textContent=ok?"PIN saved. It works on all your devices.":"PIN saved on this device only; it could not sync right now.";
+  };
+  $("pin-remove").onclick=async()=>{
+    const msg=$("pin-msg");
+    if(await hash($("pin-cur").value.trim())!==H){ msg.textContent="Enter your current PIN to remove it."; return; }
+    await store(null); H=null; ss.set("zm_unlocked",null); settings(); $("pin-cur").value=""; msg.textContent="PIN removed.";
+  };
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden) hiddenAt=Date.now();
+    else if(H && hiddenAt && Date.now()-hiddenAt>120000){ ss.set("zm_unlocked",null); ask(); }
+  });
+  // first paint: lock right away if this device knows a PIN, otherwise wait briefly for the saved setting
+  const local=ls.get("zm_pinhash");
+  if(local){ H=local; if(ss.get("zm_unlocked")!==local) ask(); else open(); }
+  settings();
+  return {
+    async init(db){
+      if(!db){ if(!H) open(); return; }
+      try{ ref=db.doc("settings/lock"); const snap=await ref.get(); const h=snap.exists&&snap.data()?snap.data().h:""; apply(h||null); }
+      catch(e){ if(!H) open(); }
+    }
+  };
+})();
+(async()=>{
+  await Lock.init(null);
+  App.mods.money.initSync(null);
+  App.mods.invest.initSync(null);
+})();
+/* ---------- app: keep storage, back up, offline ---------- */
+(function(){
+  const $=id=>document.getElementById(id);
+  const KEYS=["ziad_dash_v1","ziad_dash_t","it_state","zm_pinhash"];
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  function last(){ let t=null; try{t=localStorage.getItem("zm_lastbackup");}catch(e){}
+    $("bk-last").textContent=t?"Last backup: "+new Date(+t).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"No backup yet."; }
+  last();
+  $("bk-save").onclick=()=>{
+    const out={app:"ziads-money",v:1,at:new Date().toISOString(),data:{}};
+    KEYS.forEach(k=>{ try{ const v=localStorage.getItem(k); if(v!=null) out.data[k]=v; }catch(e){} });
+    const blob=new Blob([JSON.stringify(out)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download="ziads-money-backup-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    try{ localStorage.setItem("zm_lastbackup",String(Date.now())); }catch(e){}
+    last(); $("bk-msg").textContent="Backup file saved to your Downloads.";
+  };
+  $("bk-file").onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return; const msg=$("bk-msg");
+    try{
+      const j=JSON.parse(await f.text());
+      if(!j||j.app!=="ziads-money"||!j.data||!j.data.ziad_dash_v1) throw 0;
+      KEYS.forEach(k=>{ try{ if(j.data[k]!=null) localStorage.setItem(k,j.data[k]); }catch(e){} });
+      msg.textContent="Restored. Reopening…"; setTimeout(()=>location.reload(),600);
+    }catch(err){ msg.textContent="That file is not a Ziad's Money backup."; }
+    e.target.value="";
+  };
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+})();
+</script>
+
+</body></html>
