@@ -616,41 +616,29 @@ const $=id=>document.getElementById(id);
 
 function seed(){
   const rows=[
-    ["November",2026, 26691,13953,0,700,5548,12000,26480, 180000,40000],
-    ["December",2026, 12591,12641,0,700,5548,12000,26480, 180000,40000],
-    ["January", 2027, 12591,11329,0,700,5548,12000,26480, 90000,40000],
-    ["February",2027, 12591,11329,0,700,5548,12000,26480, 90000,40000],
-    ["March",   2027, 12591,11329,5106,700,5548,12000,26480, 90000,40000],
-    ["April",   2027, 925,9662,5106,700,5548,12000,26480, 90000,40000],
-    ["May",     2027, 0,0,5106,700,5548,12000,26480, 90000,40000],
-    ["June",    2027, 0,0,5106,0,5548,12000,26480, 90000,40000],
-    ["July",    2027, 0,0,0,0,5548,12000,26480, 90000,40000],
-    ["August",  2027, 0,0,0,0,5548,12000,26480, 90000,40000],
-    ["September",2027,0,0,0,0,5548,12000,26480, 90000,40000],
-    ["October", 2027, 0,0,0,0,5548,12000,26480, 90000,40000],
-    ["November",2027, 0,0,0,0,5548,12000,26480, 90000,40000],
-    ["December",2027, 0,0,0,0,5548,12000,26480, 90000,40000],
-    ["January", 2028, 0,0,0,0,5548,12000,26480, 90000,40000]
+    ["November",2026, 0,0,0,0,0,0,10000, 50000,30000],
+    ["December",2026, 0,0,0,0,0,0,10000, 50000,30000],
+    ["January", 2027, 0,0,0,0,0,0,10000, 50000,30000]
   ].map(r=>({month:r[0],year:r[1],split:r.slice(2,9),income:r[9],daily:r[10]}));
   return {
     rate:50, cur:"EGP", v:3, _scrub:0,
     assets:[
-      {name:"US dollar",amount:2408,ccy:"USD",cat:"Currency"},
+      {name:"US dollar",amount:1000,ccy:"USD",cat:"Currency"},
       {name:"British pounds",amount:0,rate:65,ccy:"GBP",cat:"Currency"},
-      {name:"EGP cash",amount:90000,rate:1,ccy:"EGP",cat:"Currency"},
-      {name:"Gold",amount:1,rate:208400,ccy:"EGP"},
-      {name:"Certificate",amount:1,rate:170000,ccy:"EGP"},
-      {name:"Thndr",amount:1,rate:45000,ccy:"EGP"},
+      {name:"EGP cash",amount:50000,rate:1,ccy:"EGP",cat:"Currency"},
+      {name:"Gold",amount:1,rate:100000,ccy:"EGP"},
+      {name:"Certificate",amount:1,rate:50000,ccy:"EGP"},
+      {name:"Thndr",amount:1,rate:10000,ccy:"EGP"},
       {name:"Thndr savings",amount:1,rate:0,ccy:"EGP"},
-      {name:"Bitcoin",amount:800,ccy:"USD"},
-      {name:"IBKR",amount:400,ccy:"USD"}
+      {name:"Bitcoin",amount:0,ccy:"USD"},
+      {name:"IBKR",amount:0,ccy:"USD"}
     ],
-    liab:{Loan:450000,Installments:210000,"Nawy shares":338227},
+    liab:{Loan:100000,Installments:50000,"Nawy shares":0},
     months:rows,
     plans:[
-      ["2 year baby run",30,2000000],["Egypt travel",5,50000],["Travel abroad",15,750000],
-      ["Investments",5,0],["Rolex watch",5,500000],["Salma accessories",5,500000],
-      ["Home furniture",10,150000],["New car",25,800000]
+      ["2 year baby run",30,0],["Egypt travel",5,0],["Travel abroad",15,0],
+      ["Investments",5,0],["Rolex watch",5,0],["Salma accessories",5,0],
+      ["Home furniture",10,0],["New car",25,0]
     ].map(p=>({name:p[0],pct:p[1],target:p[2]}))
   };
 }
