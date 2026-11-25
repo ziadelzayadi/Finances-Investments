@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Spending</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <div class="month-bar">
+    <button class="icon-btn" data-act="month-prev" aria-label="Previous month">&#8249;</button>
+    <div id="month-label">&nbsp;</div>
+    <button class="icon-btn" data-act="month-next" aria-label="Next month">&#8250;</button>
+  </div>
+</header>
+<main id="view"></main>
+<nav id="tabs">
+  <button data-tab="home" class="on"><span class="ti">&#9673;</span>Home</button>
+  <button data-tab="tx"><span class="ti">&#8801;</span>Transactions<b id="sort-badge" hidden></b></button>
+  <button data-tab="cats"><span class="ti">&#9638;</span>Categories</button>
+  <button data-tab="settings"><span class="ti">&#9881;</span>Settings</button>
+</nav>
+<div id="sheet-wrap" hidden><div id="sheet-bg" data-act="close-sheet"></div><div id="sheet"></div></div>
+<div id="toast" hidden></div>
+<script src="parser.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+# Builds the "My Spending" Android app and publishes the APK on the
+# repository's Releases page (tag: sms-app-latest), so it can be
+# downloaded straight to the phone. Runs on every change to sms-spending-app/,
+# or by hand from the Actions tab ("Run workflow").
+name: Build My Spending app
+
+on:
+  push:
+    paths:
+      - 'sms-spending-app/**'
+      - '.github/workflows/build-sms-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-sms-app
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sms-spending-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the SMS parser
+        run: node tests/parser.test.js
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build the APK
+        run: gradle --no-daemon assembleRelease
+
+      - name: Publish the APK on the Releases page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk MySpending.apk
+          gh release delete sms-app-latest --yes --cleanup-tag || true
+          gh release create sms-app-latest MySpending.apk \
+            --target "$GITHUB_SHA" \
+            --title "My Spending app (build ${GITHUB_RUN_NUMBER})" \
+            --notes "Open this page on your phone and tap MySpending.apk to download it. Built from branch ${GITHUB_REF_NAME}, commit ${GITHUB_SHA::7}." \
+            --latest=false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MySpending-apk
+          path: sms-spending-app/MySpending.apk
