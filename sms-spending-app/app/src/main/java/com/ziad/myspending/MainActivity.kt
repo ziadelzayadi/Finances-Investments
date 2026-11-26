@@ -43,6 +43,9 @@ class MainActivity : Activity() {
         web.settings.domStorageEnabled = true
         web.settings.allowFileAccess = false
         web.settings.allowContentAccess = false
+        // Always load the app's newest screens after an update.
+        web.settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+        web.clearCache(true)
         web.webViewClient = object : WebViewClient() {
             // Never leave the app's own pages.
             override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean = true
@@ -118,6 +121,12 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun hasSmsPermission(): Boolean = hasSms()
+
+        @JavascriptInterface
+        fun appVersion(): String = try {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+        } catch (e: Exception) { "" }
 
         @JavascriptInterface
         fun requestSmsPermission() {

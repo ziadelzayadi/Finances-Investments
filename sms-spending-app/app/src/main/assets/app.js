@@ -3,6 +3,7 @@
   'use strict';
   var P = window.SmsParser;
   var hasAndroid = typeof window.Android !== 'undefined';
+  var APP_VERSION = '1.0.3';  // shown in Settings (the installed version number comes from Android)
 
   // ---------- Colors (validated categorical palette, fixed order) ----------
   var PALETTE = ['#257de0', '#f47230', '#00b894', '#f2a600', '#ee7fac', '#008a17', '#6a4ce2', '#ec4647'];
@@ -180,7 +181,7 @@
   }
 
   // ---------- UI state ----------
-  var UI = { tab: 'home', month: null, sortQ: '', sortScope: 'unsorted', sel: {}, txMode: 'all', search: '', sheetStack: 0, trendSel: null, daySel: null };
+  var UI = { tab: 'home', month: null, sortQ: '', sortScope: 'unsorted', sel: {}, flt: { from: '', to: '', min: '', max: '', minCount: '', sort: 'newest' }, txMode: 'all', search: '', sheetStack: 0, trendSel: null, daySel: null };
   var view = document.getElementById('view');
 
   function toast(msg) {
@@ -460,18 +461,79 @@
     var c = catById(t.cat);
     return normText((t.merchant || '') + ' ' + (t.raw || '') + ' ' + (t.note || '') + ' ' + (c ? c.name : '') + ' ' + t.amount);
   }
+  function dateFromInput(v, endOfDay) {
+    if (!v) return null;
+    var p = v.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2] + (endOfDay ? 1 : 0)).getTime();
+  }
+  function activeFilters() {
+    var f = UI.flt, n = 0;
+    if (f.from || f.to) n++;
+    if (P.parseNumber(f.min) > 0 || P.parseNumber(f.max) > 0) n++;
+    if (P.parseNumber(f.minCount) > 1) n++;
+    if (f.sort !== 'newest') n++;
+    return n;
+  }
   function sortList() {
-    var q = normText(UI.sortQ);
-    return visibleTx().filter(function (t) {
+    var q = normText(UI.sortQ), f = UI.flt;
+    var from = dateFromInput(f.from, false), to = dateFromInput(f.to, true);
+    var min = P.parseNumber(f.min), max = P.parseNumber(f.max), minCount = P.parseNumber(f.minCount);
+    var list = visibleTx().filter(function (t) {
       if (UI.sortScope === 'unsorted' && t.cat) return false;
+      if (from && t.date < from) return false;
+      if (to && t.date >= to) return false;
+      var e = egp(t);
+      if (min > 0 && e < min) return false;
+      if (max > 0 && e > max) return false;
       return !q || txText(t).indexOf(q) >= 0;
-    }).sort(function (a, b) { return b.date - a.date; });
+    });
+    // how many transactions each place has (within the filtered list)
+    var counts = {};
+    list.forEach(function (t) { var k = t.dir + '|' + P.merchantKey(t.merchant); counts[k] = (counts[k] || 0) + 1; });
+    list.forEach(function (t) { t._n = counts[t.dir + '|' + P.merchantKey(t.merchant)]; });
+    if (minCount > 1) list = list.filter(function (t) { return t._n >= minCount; });
+    var by = {
+      newest: function (a, b) { return b.date - a.date; },
+      oldest: function (a, b) { return a.date - b.date; },
+      biggest: function (a, b) { return egp(b) - egp(a); },
+      smallest: function (a, b) { return egp(a) - egp(b); },
+      frequent: function (a, b) { return b._n - a._n || b.date - a.date; }
+    }[f.sort] || function (a, b) { return b.date - a.date; };
+    return list.sort(by);
+  }
+  function filterSummary() {
+    var f = UI.flt, parts = [];
+    if (f.from || f.to) parts.push((f.from || '…') + ' to ' + (f.to || '…'));
+    var min = P.parseNumber(f.min), max = P.parseNumber(f.max);
+    if (min > 0 && max > 0) parts.push('EGP ' + fmt(min) + '–' + fmt(max));
+    else if (min > 0) parts.push('EGP ' + fmt(min) + ' or more');
+    else if (max > 0) parts.push('up to EGP ' + fmt(max));
+    if (P.parseNumber(f.minCount) > 1) parts.push('places with ' + P.parseNumber(f.minCount) + '+ transactions');
+    if (f.sort !== 'newest') parts.push({ oldest: 'oldest first', biggest: 'biggest first', smallest: 'smallest first', frequent: 'most frequent places first' }[f.sort]);
+    return parts.join(' · ');
+  }
+  function openFilter() {
+    var f = UI.flt;
+    openSheet('<h3>Filter</h3>' +
+      '<div class="row"><label class="f grow">From date<input type="date" id="ff-from" value="' + esc(f.from) + '"></label>' +
+      '<label class="f grow">To date<input type="date" id="ff-to" value="' + esc(f.to) + '"></label></div>' +
+      '<div class="row"><label class="f grow">Amount from (EGP)<input id="ff-min" inputmode="decimal" value="' + esc(f.min) + '" placeholder="Any"></label>' +
+      '<label class="f grow">Amount up to (EGP)<input id="ff-max" inputmode="decimal" value="' + esc(f.max) + '" placeholder="Any"></label></div>' +
+      '<label class="f">Only places with at least this many transactions<input id="ff-count" inputmode="numeric" value="' + esc(f.minCount) + '" placeholder="Any, e.g. 3"></label>' +
+      '<label class="f">Order<select id="ff-sort">' + [['newest', 'Newest first'], ['oldest', 'Oldest first'], ['biggest', 'Biggest amount first'], ['smallest', 'Smallest amount first'], ['frequent', 'Most transactions per place first']].map(function (o) {
+        return '<option value="' + o[0] + '"' + (o[0] === f.sort ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></label>' +
+      '<div class="btns"><button class="btn grow" data-act="apply-filter">Show results</button><button class="btn ghost" data-act="clear-filter">Clear filters</button></div>',
+      { type: 'filter' });
   }
   function selCount() { return Object.keys(UI.sel).length; }
 
   function sortHtml() {
     var n = unsortedCount();
-    return '<input class="search" type="search" placeholder="Search all transactions, e.g. seoudi" value="' + esc(UI.sortQ) + '" data-input="sortq">' +
+    var nf = activeFilters();
+    return '<div class="row search-row"><input class="search grow" type="search" placeholder="Search all transactions, e.g. seoudi" value="' + esc(UI.sortQ) + '" data-input="sortq">' +
+      '<button class="btn ' + (nf ? '' : 'ghost ') + 'filter-btn" data-act="open-filter">Filter' + (nf ? ' (' + nf + ')' : '') + '</button></div>' +
+      (nf ? '<div class="filter-sum small"><span class="grow">' + esc(filterSummary()) + '</span><a href="#" data-act="clear-filter">Clear</a></div>' : '') +
       '<div class="seg small-seg"><button data-act="sort-scope" data-s="unsorted" class="' + (UI.sortScope === 'unsorted' ? 'on' : '') + '">Not sorted (' + n + ')</button>' +
       '<button data-act="sort-scope" data-s="all" class="' + (UI.sortScope === 'all' ? 'on' : '') + '">All transactions</button></div>' +
       '<div id="sortbody">' + sortBody() + '</div>';
@@ -530,7 +592,13 @@
       if (!g[k]) { g[k] = { key: k, merchant: t.merchant, dir: t.dir, ids: [], sum: 0, last: 0 }; order.push(k); }
       g[k].ids.push(t.id); g[k].sum += egp(t); g[k].last = Math.max(g[k].last, t.date);
     });
-    return order.map(function (k) { return g[k]; }).sort(function (a, b) { return b.ids.length - a.ids.length || b.sum - a.sum; });
+    var arr = order.map(function (k) { return g[k]; });
+    var srt = UI.flt.sort;
+    if (srt === 'newest') return arr.sort(function (a, b) { return b.last - a.last; });
+    if (srt === 'oldest') return arr.sort(function (a, b) { return a.last - b.last; });
+    if (srt === 'biggest') return arr.sort(function (a, b) { return b.sum - a.sum; });
+    if (srt === 'smallest') return arr.sort(function (a, b) { return a.sum - b.sum; });
+    return arr.sort(function (a, b) { return b.ids.length - a.ids.length || b.sum - a.sum; });
   }
 
   function refreshSortBody() {
@@ -852,7 +920,8 @@
 
     html += '<div class="card"><h2>Privacy</h2><p class="small" style="margin:0">This app has no internet permission. It reads SMS only on this phone and stores everything in its own private storage. ' +
       D.tx.length + ' transactions stored.</p><div class="btns"><button class="btn danger small" data-act="wipe">Erase all data in this app</button></div></div>';
-    html += '<p class="center tiny muted">My Spending</p>';
+    var ver = ''; try { ver = hasAndroid && window.Android.appVersion ? window.Android.appVersion() : ''; } catch (e) {}
+    html += '<p class="center tiny muted">My Spending · version ' + esc(ver || APP_VERSION) + '</p>';
     view.innerHTML = html;
   }
 
@@ -1009,6 +1078,13 @@
         UI.tab = 'tx'; UI.txMode = c ? 'all' : 'sort'; UI.search = c ? c.name : ''; render(); window.scrollTo(0, 0); break;
       }
       case 'sort-group': openSortGroup(el.dataset.key); break;
+      case 'open-filter': openFilter(); break;
+      case 'apply-filter':
+        UI.flt = { from: document.getElementById('ff-from').value, to: document.getElementById('ff-to').value,
+          min: document.getElementById('ff-min').value.trim(), max: document.getElementById('ff-max').value.trim(),
+          minCount: document.getElementById('ff-count').value.trim(), sort: document.getElementById('ff-sort').value };
+        UI.sel = {}; closeSheet(); render(); break;
+      case 'clear-filter': UI.flt = { from: '', to: '', min: '', max: '', minCount: '', sort: 'newest' }; UI.sel = {}; closeSheet(); render(); break;
       case 'sort-scope': UI.sortScope = el.dataset.s; UI.sel = {}; render(); break;
       case 'sel-tx': if (UI.sel[el.dataset.id]) delete UI.sel[el.dataset.id]; else UI.sel[el.dataset.id] = 1; refreshSortBody(); break;
       case 'sel-group': {
