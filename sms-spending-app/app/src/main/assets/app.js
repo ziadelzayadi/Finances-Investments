@@ -39,6 +39,7 @@
         return { id: uid() + c[0].length, name: c[0], kind: c[1], budget: 0, color: color };
       }),
       rules: {},            // merchantKey -> categoryId
+      kw: [],               // "contains" rules: { id, text, cat, dir }
       tx: [],
       senders: {},          // sms sender -> { on: bool, count: n }
       settings: {
@@ -66,6 +67,7 @@
     var def = defaultData();
     d.categories = d.categories || def.categories;
     d.rules = d.rules || {};
+    d.kw = d.kw || [];
     d.tx = d.tx || [];
     d.senders = d.senders || {};
     d.settings = Object.assign({}, def.settings, d.settings || {});
@@ -178,7 +180,7 @@
   }
 
   // ---------- UI state ----------
-  var UI = { tab: 'home', month: null, txMode: 'all', search: '', sheetStack: 0, trendSel: null, daySel: null };
+  var UI = { tab: 'home', month: null, sortQ: '', sortScope: 'unsorted', sel: {}, txMode: 'all', search: '', sheetStack: 0, trendSel: null, daySel: null };
   var view = document.getElementById('view');
 
   function toast(msg) {
@@ -426,7 +428,7 @@
       if (lastDay) html += '</div>';
       html += '</div>';
     }
-    html += '<button class="fab" data-act="add-tx" aria-label="Add a cash transaction">+</button>';
+    if (UI.txMode !== 'sort') html += '<button class="fab" data-act="add-tx" aria-label="Add a cash transaction">+</button>';
     view.innerHTML = html;
   }
 
@@ -452,15 +454,174 @@
     return Object.keys(g).map(function (k) { return g[k]; }).sort(function (a, b) { return b.n - a.n || b.sum - a.sum; });
   }
 
+  // ---------- Sorting: search, select, sort many at once ----------
+  function normText(x) { return P.normDigits(x || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+  function txText(t) {
+    var c = catById(t.cat);
+    return normText((t.merchant || '') + ' ' + (t.raw || '') + ' ' + (t.note || '') + ' ' + (c ? c.name : '') + ' ' + t.amount);
+  }
+  function sortList() {
+    var q = normText(UI.sortQ);
+    return visibleTx().filter(function (t) {
+      if (UI.sortScope === 'unsorted' && t.cat) return false;
+      return !q || txText(t).indexOf(q) >= 0;
+    }).sort(function (a, b) { return b.date - a.date; });
+  }
+  function selCount() { return Object.keys(UI.sel).length; }
+
   function sortHtml() {
-    var groups = unsortedGroups();
-    if (!groups.length) return '<div class="card empty">Everything is sorted. 🎉<br><span class="small">New bank SMS will show up here when a place is new.</span></div>';
-    return '<p class="small muted" style="margin:2px 4px 10px">Grouped by place, all months. Pick a category once and every transaction from that place is sorted, now and in the future.</p>' +
-      '<div class="card" style="padding:2px 12px">' + groups.map(function (g) {
-        return '<div class="list-item" data-act="sort-group" data-key="' + esc(g.key) + '"><div class="grow"><div class="ellipsis"><b>' + esc(g.merchant) + '</b></div>' +
-          '<div class="tiny muted">' + (g.dir === 'in' ? 'Money in' : 'Money out') + ' · ' + g.n + ' transaction' + (g.n > 1 ? 's' : '') + ' · last ' + dayLabel(g.last) + '</div></div>' +
-          '<div class="amt' + (g.dir === 'in' ? ' in' : '') + '">' + egpStr(g.sum, 0) + '</div></div>';
-      }).join('') + '</div>';
+    var n = unsortedCount();
+    return '<input class="search" type="search" placeholder="Search all transactions, e.g. seoudi" value="' + esc(UI.sortQ) + '" data-input="sortq">' +
+      '<div class="seg small-seg"><button data-act="sort-scope" data-s="unsorted" class="' + (UI.sortScope === 'unsorted' ? 'on' : '') + '">Not sorted (' + n + ')</button>' +
+      '<button data-act="sort-scope" data-s="all" class="' + (UI.sortScope === 'all' ? 'on' : '') + '">All transactions</button></div>' +
+      '<div id="sortbody">' + sortBody() + '</div>';
+  }
+
+  function checkBox(on) { return '<span class="cb' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</span>'; }
+
+  function sortBody() {
+    var list = sortList();
+    var grouped = !UI.sortQ && UI.sortScope === 'unsorted';
+    var html = '';
+    if (!list.length) {
+      html += UI.sortQ ? '<div class="card empty">Nothing matches "' + esc(UI.sortQ) + '".</div>'
+        : UI.sortScope === 'unsorted' ? '<div class="card empty">Everything is sorted. 🎉<br><span class="small">New places will show up here.</span></div>'
+        : '<div class="card empty">No transactions yet.</div>';
+      return html + actionBar();
+    }
+    var allSel = list.every(function (t) { return UI.sel[t.id]; });
+    html += '<div class="row sel-row"><span class="small muted grow">' + list.length + ' transaction' + (list.length > 1 ? 's' : '') +
+      (grouped ? ', grouped by place' : '') + '</span>' +
+      '<button class="btn ghost small" data-act="sel-all">' + (allSel ? 'Unselect all' : 'Select all') + '</button></div>';
+    html += '<div class="card" style="padding:2px 12px">';
+    if (grouped) {
+      groupTx(list).forEach(function (g) {
+        var on = g.ids.every(function (id) { return UI.sel[id]; });
+        html += '<div class="list-item"><button class="cb-btn" data-act="sel-group" data-key="' + esc(g.key) + '" aria-label="Select">' + checkBox(on) + '</button>' +
+          '<div class="grow" data-act="sort-group" data-key="' + esc(g.key) + '"><div class="ellipsis"><b>' + esc(g.merchant) + '</b></div>' +
+          '<div class="tiny muted">' + (g.dir === 'in' ? 'Money in' : 'Money out') + ' · ' + g.ids.length + ' transaction' + (g.ids.length > 1 ? 's' : '') + ' · last ' + dayLabel(g.last) + '</div></div>' +
+          '<div class="amt' + (g.dir === 'in' ? ' in' : '') + '" data-act="sort-group" data-key="' + esc(g.key) + '">' + egpStr(g.sum, 0) + '</div></div>';
+      });
+    } else {
+      list.slice(0, 400).forEach(function (t) {
+        var c = catById(t.cat);
+        html += '<div class="list-item"><button class="cb-btn" data-act="sel-tx" data-id="' + esc(t.id) + '" aria-label="Select">' + checkBox(UI.sel[t.id]) + '</button>' +
+          '<div class="grow" data-act="open-tx" data-id="' + esc(t.id) + '"><div class="ellipsis">' + esc(t.merchant) + '</div><div class="tiny muted">' +
+          (c ? esc(c.name) : '<span class="chip sortme">not sorted</span>') + ' · ' + dayLabel(t.date) + '</div></div>' +
+          '<div class="amt' + (t.dir === 'in' ? ' in' : '') + '" data-act="open-tx" data-id="' + esc(t.id) + '">' + (t.dir === 'in' ? '+' : '−') + curStr(t.amount, t.currency) + '</div></div>';
+      });
+      if (list.length > 400) html += '<div class="list-item small muted">Showing the newest 400. Select all still selects all ' + list.length + '.</div>';
+    }
+    html += '</div>';
+    return html + actionBar();
+  }
+
+  function actionBar() {
+    var n = selCount();
+    if (!n) return '';
+    return '<div class="action-bar"><span class="grow"><b>' + n + '</b> selected</span>' +
+      '<button class="btn ghost small" data-act="sel-clear">Clear</button> <button class="btn small" data-act="sort-selected">Sort selected</button></div>';
+  }
+
+  function groupTx(list) {
+    var g = {}, order = [];
+    list.forEach(function (t) {
+      var k = t.dir + '|' + P.merchantKey(t.merchant);
+      if (!g[k]) { g[k] = { key: k, merchant: t.merchant, dir: t.dir, ids: [], sum: 0, last: 0 }; order.push(k); }
+      g[k].ids.push(t.id); g[k].sum += egp(t); g[k].last = Math.max(g[k].last, t.date);
+    });
+    return order.map(function (k) { return g[k]; }).sort(function (a, b) { return b.ids.length - a.ids.length || b.sum - a.sum; });
+  }
+
+  function refreshSortBody() {
+    var el = document.getElementById('sortbody');
+    if (el) el.innerHTML = sortBody(); else render();
+    var b = document.getElementById('sort-badge'), n = unsortedCount();
+    b.hidden = !n; b.textContent = n > 99 ? '99+' : n;
+  }
+
+  function openSortSelected() {
+    var ids = Object.keys(UI.sel);
+    var dirs = {};
+    ids.forEach(function (id) { var t = txById(id); if (t) dirs[t.dir] = 1; });
+    var dir = dirs.out ? 'out' : 'in';
+    var q = (UI.sortQ || '').trim();
+    openSheet('<h3>Sort ' + ids.length + ' transaction' + (ids.length > 1 ? 's' : '') + '</h3><div class="muted small">Pick a category for all of them.</div>' +
+      catChips(null, dir) +
+      (q ? '<label class="check"><input type="checkbox" id="mk-rule" checked> Also make a rule: anything containing "' + esc(q) + '" goes here, now and in the future</label>'
+         : '<label class="check"><input type="checkbox" id="remember" checked> Remember these places for the future</label>'),
+      { type: 'multi', dir: dir });
+  }
+
+  function sortSelectedInto(catId) {
+    var ids = Object.keys(UI.sel), n = 0;
+    var mkRule = document.getElementById('mk-rule'), remember = document.getElementById('remember');
+    ids.forEach(function (id) {
+      var t = txById(id); if (!t) return;
+      t.cat = catId; n++;
+      if (remember && remember.checked) D.rules[ruleKey(t.dir, t.merchant)] = catId;
+    });
+    var extra = 0;
+    if (mkRule && mkRule.checked) {
+      var r = { id: uid(), text: UI.sortQ.trim(), cat: catId, dir: 'any' };
+      D.kw = D.kw.filter(function (x) { return normText(x.text) !== normText(r.text); });
+      D.kw.push(r);
+      extra = applyKwRule(r, false);
+    }
+    UI.sel = {};
+    save();
+    toast(n + extra + ' sorted into ' + catById(catId).name + (mkRule && mkRule.checked ? '. Rule saved' : ''));
+  }
+
+  // ---------- "Contains" rules ----------
+  function kwMatches(rule, t) {
+    if (rule.dir !== 'any' && rule.dir !== t.dir) return false;
+    var k = normText(rule.text);
+    return !!k && normText((t.merchant || '') + ' ' + (t.raw || '') + ' ' + (t.note || '')).indexOf(k) >= 0;
+  }
+  // Category for a new transaction: a remembered place first, then "contains" rules.
+  function autoCat(t) {
+    var c = D.rules[ruleKey(t.dir, t.merchant)];
+    if (c && catById(c)) return c;
+    for (var i = 0; i < D.kw.length; i++) if (kwMatches(D.kw[i], t) && catById(D.kw[i].cat)) return D.kw[i].cat;
+    return null;
+  }
+  function applyKwRule(rule, alsoSorted) {
+    var n = 0;
+    D.tx.forEach(function (t) {
+      if (t.hidden) return;
+      if ((!t.cat || (alsoSorted && t.cat !== rule.cat)) && kwMatches(rule, t)) { t.cat = rule.cat; n++; }
+    });
+    return n;
+  }
+
+  function openKwForm(rule) {
+    var isNew = !rule;
+    rule = rule || { text: '', cat: '', dir: 'any' };
+    openSheet('<h3>' + (isNew ? 'New rule' : 'Edit rule') + '</h3>' +
+      '<p class="small muted" style="margin-top:0">Any transaction whose place or SMS text contains these words goes into the category you pick.</p>' +
+      '<label class="f">Contains<input id="k-text" value="' + esc(rule.text) + '" placeholder="e.g. seoudi"></label>' +
+      '<label class="f">Put it in<select id="k-cat">' + D.categories.map(function (c) {
+        return '<option value="' + c.id + '"' + (c.id === rule.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+      }).join('') + '</select></label>' +
+      '<label class="f">For<select id="k-dir"><option value="any"' + (rule.dir === 'any' ? ' selected' : '') + '>Money in and out</option>' +
+      '<option value="out"' + (rule.dir === 'out' ? ' selected' : '') + '>Money out only</option><option value="in"' + (rule.dir === 'in' ? ' selected' : '') + '>Money in only</option></select></label>' +
+      '<label class="check"><input type="checkbox" id="k-resort"> Also change transactions I already sorted</label>' +
+      '<button class="btn block" data-act="save-kw">Save rule</button>' +
+      (isNew ? '' : '<div class="btns"><button class="btn danger small" data-act="del-kw">Delete rule</button></div>'),
+      { type: 'kw', id: isNew ? null : rule.id });
+  }
+
+  function saveKw() {
+    var text = document.getElementById('k-text').value.trim();
+    if (!text) { toast('Type the words to look for'); return; }
+    var r;
+    if (sheetCtx.id) r = D.kw.filter(function (x) { return x.id === sheetCtx.id; })[0];
+    else { r = { id: uid() }; D.kw.push(r); }
+    r.text = text; r.cat = document.getElementById('k-cat').value; r.dir = document.getElementById('k-dir').value;
+    var n = applyKwRule(r, document.getElementById('k-resort').checked);
+    save(); closeSheet(); render();
+    toast('Rule saved' + (n ? ', ' + n + ' transaction' + (n > 1 ? 's' : '') + ' sorted' : ''));
   }
 
   // ---------- Sheets ----------
@@ -563,7 +724,7 @@
       t.amount = amount; t.currency = cur; t.merchant = merchant; t.date = date; t.dir = sheetCtx.dir; t.edited = true;
     } else {
       t = { id: 'm' + uid(), manual: true, dir: sheetCtx.dir, amount: amount, currency: cur, merchant: merchant, date: date, bank: '', card: '', cat: null };
-      t.cat = D.rules[ruleKey(t.dir, merchant)] || null;
+      t.cat = autoCat(t);
       D.tx.push(t);
     }
     save();
@@ -589,6 +750,14 @@
     });
     html += '<button class="btn block" data-act="new-cat">+ Add a category</button>';
     var rules = Object.keys(D.rules);
+    html += '<div class="day-h">Rules: contains (' + D.kw.length + ')</div><div class="card" style="padding:2px 12px">';
+    if (!D.kw.length) html += '<div class="list-item muted small">Example: anything containing "seoudi" goes to Groceries.</div>';
+    D.kw.forEach(function (r) {
+      var c = catById(r.cat);
+      html += '<div class="list-item" data-act="edit-kw" data-id="' + r.id + '"><div class="grow"><div class="ellipsis">Contains "<b>' + esc(r.text) + '</b>"</div><div class="tiny muted">' +
+        (r.dir === 'out' ? 'Money out' : r.dir === 'in' ? 'Money in' : 'Money in and out') + ' → ' + esc(c ? c.name : 'deleted category') + '</div></div><span class="muted">&rsaquo;</span></div>';
+    });
+    html += '</div><button class="btn ghost block" data-act="new-kw">+ Add a "contains" rule</button>';
     html += '<div class="day-h">Remembered places (' + rules.length + ')</div><div class="card" style="padding:2px 12px">';
     if (!rules.length) html += '<div class="list-item muted small">When you sort a place with "Always put…" ticked, it shows here.</div>';
     rules.sort().forEach(function (k) {
@@ -643,6 +812,7 @@
       // return to the transaction / group the user was sorting, with the new category picked
       if (back.type === 'tx') { openTx(back.id); }
       else if (back.type === 'group') { openSortGroup(back.key); }
+      else if (back.type === 'multi') { openSortSelected(); }
     } else closeSheet();
     render();
   }
@@ -698,6 +868,8 @@
     ['CIB', 'تم خصم مبلغ  EGP 2,100.00 من بطاقة الخصم المباشر المنتهية بـ **2222 عند ZARA في 08/11/26 12:21 ، الرصيد المتاح 7000.00 EGP', -17],
     ['NBE', 'تم خصم 640 جم من بطاقة الائتمان رقم 1111  عند PAYMOBMEAT PART يوم 10-25 الساعة 19:40 المتاح 2000 جم', -31],
     ['CIB', 'تم خصم مبلغ  EGP 900.00 من بطاقة الخصم المباشر المنتهية بـ **2222 عند CARREFOUR MAADI في 20/10/26 18:02 ، الرصيد المتاح 9000.00 EGP', -36],
+    ['CIB', 'تم خصم مبلغ  EGP 760.00 من بطاقة الخصم المباشر المنتهية بـ **2222 عند SEOUDI MARKET ZAMALEK في 19/11/26 20:10 ، الرصيد المتاح 8000.00 EGP', -6],
+    ['NBE', 'تم خصم 430 جم من بطاقة الائتمان رقم 1111  عند SEOUDI SUPERMARKET يوم 11-03 الساعة 13:00 المتاح 1500 جم', -22],
     ['CIB', 'رمز التحقق 123456 لعملية بمبلغ 500 جم', -2],
     ['Vodafone', 'تم شحن رصيدك بمبلغ 50 جنيه', -3]
   ];
@@ -731,7 +903,7 @@
         id: key, smsId: key, sender: a, raw: m.body, date: m.date, dir: r.dir, amount: r.amount, currency: r.currency,
         merchant: r.merchant, bank: r.bank, card: r.card, cardType: r.cardType, kind: r.kind, cat: null
       };
-      t.cat = D.rules[ruleKey(t.dir, t.merchant)] || null;
+      t.cat = autoCat(t);
       D.tx.push(t); have[key] = 1;
       if (D.senders[a].on !== false) added++;
     });
@@ -837,6 +1009,27 @@
         UI.tab = 'tx'; UI.txMode = c ? 'all' : 'sort'; UI.search = c ? c.name : ''; render(); window.scrollTo(0, 0); break;
       }
       case 'sort-group': openSortGroup(el.dataset.key); break;
+      case 'sort-scope': UI.sortScope = el.dataset.s; UI.sel = {}; render(); break;
+      case 'sel-tx': if (UI.sel[el.dataset.id]) delete UI.sel[el.dataset.id]; else UI.sel[el.dataset.id] = 1; refreshSortBody(); break;
+      case 'sel-group': {
+        var gg = groupTx(sortList()).filter(function (x) { return x.key === el.dataset.key; })[0];
+        if (gg) {
+          var allOn = gg.ids.every(function (id) { return UI.sel[id]; });
+          gg.ids.forEach(function (id) { if (allOn) delete UI.sel[id]; else UI.sel[id] = 1; });
+        }
+        refreshSortBody(); break;
+      }
+      case 'sel-all': {
+        var lst = sortList(), every = lst.every(function (t) { return UI.sel[t.id]; });
+        lst.forEach(function (t) { if (every) delete UI.sel[t.id]; else UI.sel[t.id] = 1; });
+        refreshSortBody(); break;
+      }
+      case 'sel-clear': UI.sel = {}; refreshSortBody(); break;
+      case 'sort-selected': openSortSelected(); break;
+      case 'new-kw': openKwForm(null); break;
+      case 'edit-kw': openKwForm(D.kw.filter(function (x) { return x.id === el.dataset.id; })[0]); break;
+      case 'save-kw': saveKw(); break;
+      case 'del-kw': D.kw = D.kw.filter(function (x) { return x.id !== sheetCtx.id; }); save(); closeSheet(); render(); toast('Rule deleted'); break;
       case 'group-one-by-one': {
         var key = el.dataset.key;
         var first = visibleTx().filter(function (t) { return !t.cat && (t.dir + '|' + P.merchantKey(t.merchant)) === key; })
@@ -848,7 +1041,8 @@
       case 'pick-cat': {
         var remember = (document.getElementById('remember') || {}).checked;
         var ctx = sheetCtx;
-        if (ctx.type === 'group') { applyCategoryToGroup(ctx.key, el.dataset.id, remember); closeSheet(); render(); }
+        if (ctx.type === 'multi') { sortSelectedInto(el.dataset.id); closeSheet(); render(); }
+        else if (ctx.type === 'group') { applyCategoryToGroup(ctx.key, el.dataset.id, remember); closeSheet(); render(); }
         else if (ctx.type === 'tx') {
           saveNoteFromSheet();
           var t = txById(ctx.id);
@@ -933,6 +1127,7 @@
   });
 
   document.addEventListener('input', function (e) {
+    if (e.target.dataset.input === 'sortq') { UI.sortQ = e.target.value; refreshSortBody(); return; }
     if (e.target.dataset.input === 'search') {
       UI.search = e.target.value;
       var list = visibleTx().filter(function (t) { return periodKey(t.date) === UI.month && txMatches(t); }).sort(function (a, b) { return b.date - a.date; });
